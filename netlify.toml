@@ -1,0 +1,19 @@
+[build]
+  base = "."
+  command = "npm run build"
+  publish = "dist/public"
+
+[[redirects]]
+  from = "/api/*"
+  to = "http://localhost:3001/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/health"
+  to = "http://localhost:3001/health"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
