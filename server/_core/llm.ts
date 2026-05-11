@@ -57,10 +57,12 @@ const normalizeMessage = (message: Message) => {
   return { role, name, content: contentParts };
 };
 
-const resolveApiUrl = () =>
-  ENV.forgeApiUrl?.trim()
-    ? `${ENV.forgeApiUrl.replace(/\/$/, "")}/v1/chat/completions`
-    : "https://forge.manus.im/v1/chat/completions";
+// Strip /v1 suffix so we can always safely append /v1/chat/completions,
+// regardless of whether FORGE_API_URL was set with or without the /v1 prefix.
+const resolveApiUrl = () => {
+  const base = (ENV.forgeApiUrl || "https://forge.manus.im").replace(/\/+$/, "").replace(/\/v1$/, "");
+  return `${base}/v1/chat/completions`;
+};
 
 export async function invokeLLM(params: InvokeParams): Promise<InvokeResult> {
   if (!ENV.forgeApiKey) throw new Error("FORGE_API_KEY is not configured");
