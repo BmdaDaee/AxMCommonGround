@@ -1,0 +1,403 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Unbounded:wght@700;800;900&family=Nunito:ital,wght@0,300;0,400;0,600;0,700;0,800;1,400&family=Manrope:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+/* ─── Obsidian Sovereign — Merged Design System ─── */
+/* Foundation: cgo OKLch color system + EmergentCG palette additions */
+:root {
+  /* Core backgrounds */
+  --background: oklch(0.10 0.06 290);
+  --foreground: oklch(0.97 0.02 75);
+  --card: oklch(0.16 0.06 290 / 0.7);
+  --card-foreground: oklch(0.97 0.02 75);
+  --popover: oklch(0.18 0.06 290 / 0.9);
+  --popover-foreground: oklch(0.97 0.02 75);
+  --surface: oklch(0.14 0.06 290 / 0.6);
+  --elevated: oklch(0.20 0.07 290 / 0.75);
+
+  /* Gemstone Brand Palette (cgo) */
+  --midas-gold: oklch(0.78 0.16 75);
+  --warm-gold: oklch(0.72 0.14 75);
+  --savage-gold: oklch(0.82 0.20 72);
+  --neon-green: oklch(0.85 0.28 142);
+  --emerald: oklch(0.50 0.16 162);
+  --emerald-light: oklch(0.62 0.18 162);
+  --royal-purple: oklch(0.55 0.18 290);
+
+  /* EmergentCG additions — iridescent purple + red highlight */
+  --accent-purple: oklch(0.55 0.22 290); /* #9D4EDD */
+  --highlight-red: oklch(0.56 0.22 24);  /* #E63946 */
+  --surface-glass: rgba(10, 10, 10, 0.85);
+  --border-subtle: #1F1F1F;
+
+  /* DeeplyUs */
+  --deeply-bg: #1A0000;
+  --deeply-accent: #8B0000;
+  --deeply-text: #F7D6D9;
+
+  /* shadcn tokens */
+  --primary: oklch(0.78 0.16 75);
+  --primary-foreground: oklch(0.10 0.04 290);
+  --secondary: oklch(0.20 0.08 290 / 0.6);
+  --secondary-foreground: oklch(0.97 0.02 75);
+  --muted: oklch(0.22 0.06 290 / 0.5);
+  --muted-foreground: oklch(0.72 0.06 75);
+  --accent: oklch(0.50 0.16 162);
+  --accent-foreground: oklch(0.97 0 0);
+  --destructive: oklch(0.55 0.22 25);
+  --destructive-foreground: oklch(0.97 0 0);
+  --border: oklch(0.78 0.16 75 / 0.20);
+  --input: oklch(0.22 0.08 290 / 0.6);
+  --ring: oklch(0.78 0.16 75 / 0.5);
+  --radius: 1rem;
+
+  --chart-1: oklch(0.78 0.16 75);
+  --chart-2: oklch(0.85 0.28 142);
+  --chart-3: oklch(0.50 0.16 162);
+  --chart-4: oklch(0.55 0.18 290);
+  --chart-5: oklch(0.65 0.20 40);
+
+  --sidebar: oklch(0.12 0.06 290 / 0.8);
+  --sidebar-foreground: oklch(0.97 0.02 75);
+  --sidebar-primary: oklch(0.78 0.16 75);
+  --sidebar-primary-foreground: oklch(0.10 0.04 290);
+  --sidebar-accent: oklch(0.22 0.08 290 / 0.5);
+  --sidebar-accent-foreground: oklch(0.97 0.02 75);
+  --sidebar-border: oklch(0.78 0.16 75 / 0.15);
+  --sidebar-ring: oklch(0.78 0.16 75 / 0.4);
+}
+
+.deeplyus-mode {
+  --background: oklch(0.18 0.08 340);
+  --surface: oklch(0.22 0.08 340);
+  --elevated: oklch(0.26 0.08 290);
+  --card: oklch(0.24 0.08 320 / 0.7);
+  --card-foreground: oklch(0.97 0.04 350);
+  --border: oklch(0.65 0.12 350 / 0.25);
+  --primary: oklch(0.70 0.16 350);
+  --primary-foreground: oklch(0.97 0 0);
+  --muted: oklch(0.30 0.08 290 / 0.5);
+  --muted-foreground: oklch(0.80 0.08 350);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Nunito', 'Manrope', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    background: linear-gradient(
+      170deg,
+      oklch(0.10 0.08 290) 0%,
+      oklch(0.14 0.10 270) 30%,
+      oklch(0.18 0.12 250) 55%,
+      oklch(0.22 0.14 60) 80%,
+      oklch(0.28 0.16 50) 100%
+    );
+    background-attachment: fixed;
+    min-height: 100dvh;
+  }
+
+  html { max-width: 480px; margin: 0 auto; }
+
+  /* Typography hierarchy — cgo Cinzel + EmergentCG Unbounded */
+  h1, h2 {
+    font-family: 'Unbounded', 'Cinzel', system-ui, sans-serif;
+    font-weight: 900;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+  }
+  h3 {
+    font-family: 'Cinzel', system-ui, sans-serif;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  h4, h5, h6 {
+    font-family: 'Manrope', 'Nunito', system-ui, sans-serif;
+    font-weight: 700;
+  }
+
+  #root {
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  ::-webkit-scrollbar { width: 3px; height: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: oklch(0.78 0.16 75 / 0.3); border-radius: 2px; }
+
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled), [type="submit"]:not(:disabled),
+  a[href], select:not(:disabled) { @apply cursor-pointer; }
+}
+
+@layer components {
+  /* ── Frosted Glass Card System (cgo) ── */
+  .glass-card {
+    background: oklch(0.18 0.08 290 / 0.55);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid oklch(0.78 0.16 75 / 0.18);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px oklch(0.08 0.06 290 / 0.5), inset 0 1px 0 oklch(0.97 0.02 75 / 0.08);
+  }
+
+  .glass-card-warm {
+    background: linear-gradient(135deg, oklch(0.22 0.10 290 / 0.60) 0%, oklch(0.20 0.08 60 / 0.45) 100%);
+    backdrop-filter: blur(20px) saturate(1.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.5);
+    border: 1px solid oklch(0.78 0.16 75 / 0.22);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px oklch(0.08 0.06 290 / 0.6), inset 0 1px 0 oklch(0.97 0.02 75 / 0.10);
+  }
+
+  .glass-card-blush {
+    background: linear-gradient(135deg, oklch(0.24 0.10 340 / 0.65) 0%, oklch(0.22 0.08 290 / 0.55) 100%);
+    backdrop-filter: blur(16px) saturate(1.4);
+    -webkit-backdrop-filter: blur(16px) saturate(1.4);
+    border: 1px solid oklch(0.70 0.14 350 / 0.22);
+    border-radius: 16px;
+    box-shadow: 0 4px 24px oklch(0.12 0.08 340 / 0.5), inset 0 1px 0 oklch(0.97 0.02 350 / 0.08);
+  }
+
+  /* EmergentCG glass surface */
+  .glass-surface {
+    background: var(--surface-glass);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  /* ── EmergentCG Bento Grid ── */
+  .bento-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  .bento-tile {
+    background: oklch(0.14 0.06 290 / 0.7);
+    border: 1px solid var(--border-subtle);
+    border-radius: 0;
+    padding: 20px;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .bento-tile:hover {
+    transform: scale(1.02);
+    box-shadow: 0 0 24px oklch(0.78 0.16 75 / 0.2);
+  }
+  .bento-tile-wide { grid-column: span 2; }
+  .bento-tile-tall { grid-row: span 2; }
+
+  /* ── Gradient Buttons ── */
+  .btn-emerald {
+    background: linear-gradient(135deg, oklch(0.50 0.16 162), oklch(0.42 0.16 240));
+    color: white; border: none; border-radius: 50px;
+    font-weight: 700; font-family: 'Nunito', sans-serif;
+    box-shadow: 0 4px 16px oklch(0.50 0.16 162 / 0.4);
+    transition: all 0.2s ease;
+  }
+  .btn-emerald:hover { box-shadow: 0 6px 24px oklch(0.50 0.16 162 / 0.6); transform: translateY(-1px) scale(1.02); }
+
+  .btn-gold {
+    background: linear-gradient(135deg, oklch(0.82 0.20 72), oklch(0.72 0.14 75));
+    color: oklch(0.10 0.04 290); border: none; border-radius: 50px;
+    font-weight: 800; font-family: 'Nunito', sans-serif;
+    box-shadow: 0 4px 16px oklch(0.78 0.16 75 / 0.4);
+    transition: all 0.2s ease;
+  }
+  .btn-gold:hover { box-shadow: 0 6px 24px oklch(0.78 0.16 75 / 0.6); transform: translateY(-1px) scale(1.02); }
+
+  /* ── XP / Progress Bar ── */
+  .xp-bar-track { background: oklch(0.22 0.06 290 / 0.5); border-radius: 50px; overflow: hidden; height: 8px; }
+  .xp-bar-fill {
+    background: linear-gradient(90deg, oklch(0.62 0.22 142), oklch(0.85 0.28 142));
+    height: 100%; border-radius: 50px;
+    box-shadow: 0 0 12px oklch(0.85 0.28 142 / 0.6);
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ── Gold Text Glow ── */
+  .text-gold-glow {
+    color: oklch(0.82 0.20 72);
+    text-shadow: 0 0 20px oklch(0.78 0.16 75 / 0.5), 0 0 40px oklch(0.78 0.16 75 / 0.25);
+  }
+  .text-neon-glow {
+    color: oklch(0.85 0.28 142);
+    text-shadow: 0 0 12px oklch(0.85 0.28 142 / 0.6), 0 0 24px oklch(0.85 0.28 142 / 0.3);
+  }
+  .text-purple-glow {
+    color: #9D4EDD;
+    text-shadow: 0 0 20px rgba(157, 78, 221, 0.5), 0 0 40px rgba(157, 78, 221, 0.25);
+  }
+
+  /* ── Bokeh Particle Layer (cgo) ── */
+  .bokeh-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  .bokeh-orb { position: absolute; border-radius: 50%; filter: blur(20px); animation: bokeh-float 8s ease-in-out infinite; }
+
+  @keyframes bokeh-float {
+    0%, 100% { transform: translateY(0) scale(1); opacity: 0.25; }
+    33% { transform: translateY(-18px) scale(1.08); opacity: 0.35; }
+    66% { transform: translateY(10px) scale(0.94); opacity: 0.20; }
+  }
+
+  @keyframes sparkle-drift {
+    0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+    20% { opacity: 0.8; }
+    80% { opacity: 0.4; }
+    100% { transform: translateY(-60px) rotate(180deg); opacity: 0; }
+  }
+
+  .sparkle {
+    position: absolute; width: 4px; height: 4px;
+    background: oklch(0.82 0.20 72); border-radius: 50%;
+    animation: sparkle-drift 4s ease-in-out infinite;
+    box-shadow: 0 0 6px oklch(0.82 0.20 72);
+  }
+
+  /* ── EmergentCG Kinetic Marquee ── */
+  @keyframes marquee-scroll {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  .marquee-track { overflow: hidden; white-space: nowrap; }
+  .marquee-inner {
+    display: inline-flex;
+    animation: marquee-scroll 20s linear infinite;
+    font-family: 'Unbounded', sans-serif;
+    font-weight: 900;
+    font-size: clamp(3rem, 8vw, 6rem);
+    color: oklch(0.78 0.16 75 / 0.08);
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
+    user-select: none;
+  }
+
+  /* ── Bottom Nav ── */
+  .bottom-nav {
+    background: oklch(0.12 0.08 290 / 0.80);
+    backdrop-filter: blur(24px) saturate(1.6);
+    -webkit-backdrop-filter: blur(24px) saturate(1.6);
+    border-top: 1px solid oklch(0.78 0.16 75 / 0.15);
+  }
+  .nav-item-active {
+    color: oklch(0.85 0.28 142);
+    filter: drop-shadow(0 0 6px oklch(0.85 0.28 142 / 0.7));
+  }
+  /* EmergentCG gold underline for active nav */
+  .nav-item-active-gold::after {
+    content: '';
+    display: block;
+    width: 100%; height: 2px;
+    background: oklch(0.78 0.16 75);
+    border-radius: 1px;
+    box-shadow: 0 0 8px oklch(0.78 0.16 75 / 0.8);
+  }
+
+  /* ── Message Bubbles ── */
+  .bubble-mine {
+    background: linear-gradient(135deg, oklch(0.50 0.16 162 / 0.85), oklch(0.42 0.16 240 / 0.80));
+    border: 1px solid oklch(0.50 0.16 162 / 0.3);
+    backdrop-filter: blur(8px);
+    border-radius: 18px 18px 4px 18px;
+    color: white;
+  }
+  .bubble-partner {
+    background: oklch(0.20 0.08 290 / 0.65);
+    border: 1px solid oklch(0.78 0.16 75 / 0.18);
+    backdrop-filter: blur(8px);
+    border-radius: 18px 18px 18px 4px;
+    color: oklch(0.95 0.02 75);
+  }
+
+  /* ── Glass Input ── */
+  .glass-input {
+    background: oklch(0.18 0.08 290 / 0.55);
+    border: 1px solid oklch(0.78 0.16 75 / 0.20);
+    border-radius: 12px;
+    color: oklch(0.97 0.02 75);
+    backdrop-filter: blur(8px);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  .glass-input:focus {
+    border-color: oklch(0.78 0.16 75 / 0.5);
+    box-shadow: 0 0 0 3px oklch(0.78 0.16 75 / 0.12);
+    outline: none;
+  }
+  .glass-input::placeholder { color: oklch(0.60 0.06 75); }
+
+  /* ── Rank Badge ── */
+  .rank-badge {
+    background: linear-gradient(135deg, oklch(0.82 0.20 72), oklch(0.65 0.18 55));
+    color: oklch(0.10 0.04 290);
+    font-weight: 800; font-size: 0.65rem; letter-spacing: 0.08em;
+    text-transform: uppercase; padding: 2px 8px; border-radius: 50px;
+    box-shadow: 0 2px 8px oklch(0.78 0.16 75 / 0.4);
+  }
+
+  /* ── Mood Slider ── */
+  .mood-slider { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 50px; outline: none; cursor: pointer; }
+  .mood-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: oklch(0.82 0.20 72); box-shadow: 0 0 8px oklch(0.78 0.16 75 / 0.6); cursor: pointer; }
+  .mood-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: oklch(0.82 0.20 72); box-shadow: 0 0 8px oklch(0.78 0.16 75 / 0.6); cursor: pointer; border: none; }
+
+  /* ── Chip Tags ── */
+  .chip {
+    background: oklch(0.22 0.08 290 / 0.6);
+    border: 1px solid oklch(0.78 0.16 75 / 0.25);
+    color: oklch(0.90 0.06 75);
+    font-size: 0.75rem; font-weight: 600; padding: 4px 12px; border-radius: 50px;
+    backdrop-filter: blur(8px); transition: all 0.15s ease;
+  }
+  .chip:hover, .chip.active {
+    background: oklch(0.78 0.16 75 / 0.25);
+    border-color: oklch(0.78 0.16 75 / 0.5);
+    color: oklch(0.82 0.20 72);
+    box-shadow: 0 0 12px oklch(0.78 0.16 75 / 0.3);
+  }
+}
