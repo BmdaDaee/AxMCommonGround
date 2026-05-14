@@ -1,37 +1,23 @@
-import { publicProcedure, router } from '../trpc';
 import { z } from 'zod';
+import { router, publicProcedure } from '../trpc.js';
+import { aiProviders } from '../services/ai/index.js';
+
 
 export const bentlyRouter = router({
-  chat: publicProcedure
-    .input(z.object({
-      pairId: z.string(),
-      userId: z.string(),
-      message: z.string(),
-      mode: z.enum(['COMMON', 'DEEPLY_US', 'SANDBOX', 'BRIDGE']),
-    }))
-    .mutation(async ({ input }) => {
-      return {
-        id: 'bently_' + Date.now(),
-        content: 'Bently AI response (full integration in Phase 3)',
-        mode: input.mode,
-        confidence: 0.85,
-        suggestions: [],
-        xpEarned: 20,
-        createdAt: new Date(),
-      };
-    }),
+  list: publicProcedure.query(() => ({ resource: 'bently', items: [] as unknown[] })),
+  getById: publicProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .query(({ input }) => ({ resource: 'bently', id: input.id, item: null as unknown })),
+  create: publicProcedure
+    .input(z.record(z.unknown()).default({}))
+    .mutation(({ input }) => ({ resource: 'bently', accepted: true, data: input })),
 
-  analyze: publicProcedure
-    .input(z.object({
-      messageId: z.string(),
-      content: z.string(),
-    }))
-    .query(async ({ input }) => {
-      return {
-        sentiment: 'neutral',
-        tone: 'serious',
-        emotionalLoad: 5,
-        communicationGap: false,
-      };
-    }),
+  coach: publicProcedure
+    .input(z.object({ message: z.string().min(1), provider: z.enum(['claude', 'venice']).default('claude') }))
+    .mutation(async ({ input }) => aiProviders[input.provider].complete({
+      messages: [
+        { role: 'system', content: 'You are Bently, a relational communication coach.' },
+        { role: 'user', content: input.message },
+      ],
+    })),
 });

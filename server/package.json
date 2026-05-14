@@ -1,33 +1,37 @@
 {
-  "name": "cgo-server",
+  "name": "@axmcommonground/server",
   "version": "1.0.0",
-  "description": "CommonGround Express + tRPC server",
+  "description": "CommonGround Express + tRPC API, Drizzle schema, relational engine, and AI integrations",
+  "private": true,
   "type": "module",
-  "main": "dist/index.js",
+  "main": "dist/server/src/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "migrate": "drizzle-kit migrate",
-    "studio": "drizzle-kit studio"
+    "start": "node dist/server/src/index.js",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "test": "npm run typecheck"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "@trpc/server": "^10.43.0",
-    "@trpc/client": "^10.43.0",
-    "trpc-cors": "^1.1.0",
-    "drizzle-orm": "^0.29.0",
-    "pg": "^8.11.0",
-    "dotenv": "^16.3.1",
-    "@anthropic-ai/sdk": "^0.15.0",
-    "axios": "^1.6.0",
-    "zod": "^3.22.0"
+    "@anthropic-ai/sdk": "^0.39.0",
+    "@trpc/server": "^11.0.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "drizzle-orm": "^0.39.1",
+    "express": "^4.21.2",
+    "pg": "^8.13.1",
+    "superjson": "^2.2.2",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
-    "typescript": "^5.3.0",
-    "tsx": "^4.1.0",
-    "drizzle-kit": "^0.20.0",
-    "@types/express": "^4.17.21",
-    "@types/node": "^20.10.0"
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.7",
+    "@types/pg": "^8.11.10",
+    "drizzle-kit": "^0.30.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3"
   }
 }

@@ -1,27 +1,13 @@
-import { publicProcedure, router } from '../trpc';
 import { z } from 'zod';
+import { router, publicProcedure } from '../trpc.js';
+
 
 export const authRouter = router({
-  signup: publicProcedure
-    .input(z.object({
-      email: z.string().email(),
-      name: z.string(),
-    }))
-    .mutation(async ({ input }) => {
-      return {
-        id: 'user_' + Date.now(),
-        email: input.email,
-        name: input.name,
-        xp: 0,
-        rank: 'SPARK',
-      };
-    }),
-
-  login: publicProcedure
-    .input(z.object({
-      email: z.string().email(),
-    }))
-    .query(async ({ input }) => {
-      return { email: input.email, authenticated: true };
-    }),
+  list: publicProcedure.query(() => ({ resource: 'auth', items: [] as unknown[] })),
+  getById: publicProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .query(({ input }) => ({ resource: 'auth', id: input.id, item: null as unknown })),
+  create: publicProcedure
+    .input(z.record(z.unknown()).default({}))
+    .mutation(({ input }) => ({ resource: 'auth', accepted: true, data: input })),
 });

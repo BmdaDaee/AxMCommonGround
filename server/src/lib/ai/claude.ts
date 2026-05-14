@@ -1,42 +1,70 @@
-import Anthropic from '@anthropic-ai/sdk';
-import { env } from '../../env';
+import { env } from '../../config/env.js';
+import type { AiCompletionRequest, AiCompletionResponse, AiProvider, AiMessage } from './types.js';
+import { AiProviderError } from './types.js';
 
-const client = new Anthropic({ apiKey: env.CLAUDE_API_KEY });
+interface AnthropicContentBlock {
+  type: string;
+  text?: string;
+}
 
-export async function callBentlyAI(options: {
-  pairId: string;
-  userId: string;
-  messageContent: string;
-  mode: 'COMMON' | 'DEEPLY_US' | 'SANDBOX' | 'BRIDGE';
-}) {
-  const systemPrompt = `You are Bently, an AI assistant for couples. You help partners communicate better.
-  
-  Current mode: ${options.mode}
-  - COMMON: General relationship advice
-  - SANDBOX: Explore perspectives safely
-  - BRIDGE: Mediate between two viewpoints
-  
-  Be warm, direct, and emotionally intelligent.`;
+interface AnthropicMessageResponse {
+  content?: AnthropicContentBlock[];
+  model?: string;
+}
 
-  const response = await client.messages.create({
-    model: 'claude-3-5-sonnet-20241022',
-    max_tokens: 500,
-    system: systemPrompt,
-    messages: [
-      {
-        role: 'user',
-        content: options.messageContent,
-      },
-    ],
-  });
+function splitSystemPrompt(messages: AiMessage[]): { system?: string; messages: Array<{ role: 'user' | 'assistant'; content: string }> } {
+  const systemMessages = messages.filter((message) => message.role === 'system').map((message) => message.content);
+  const conversationalMessages = messages
+    .filter((message) => message.role !== 'system')
+    .map((message) => ({ role: message.role as 'user' | 'assistant', content: message.content }));
 
   return {
-    id: response.id,
-    content: (response.content[0] as any).text,
-    mode: options.mode,
-    confidence: 0.85,
-    suggestions: [],
-    xpEarned: 20,
-    createdAt: new Date(),
+    system: systemMessages.length > 0 ? systemMessages.join('\n\n') : undefined,
+    messages: conversationalMessages.length > 0 ? conversationalMessages : [{ role: 'user', content: 'Respond with a concise CommonGround coaching insight.' }],
   };
+}
+
+export class ClaudeProvider implements AiProvider {
+  async complete(request: AiCompletionRequest): Promise<AiCompletionResponse> {
+    const model = request.model ?? env.anthropicModel;
+
+    if (!env.anthropicApiKey) {
+      return {
+        provider: 'mock',
+        model,
+        content: `Claude provider mock response. Received ${request.messages.length} message(s).`,
+      };
+    }
+
+    const payload = splitSystemPrompt(request.messages);
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': env.anthropicApiKey,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: request.maxTokens ?? 800,
+        temperature: request.temperature ?? 0.4,
+        system: payload.system,
+        messages: payload.messages,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new AiProviderError(`Claude request failed with status ${response.status}`, 'claude', response.status);
+    }
+
+    const data = (await response.json()) as AnthropicMessageResponse;
+    const content = data.content?.map((block) => block.text ?? '').join('').trim() ?? '';
+
+    return {
+      provider: 'claude',
+      model: data.model ?? model,
+      content,
+      raw: data,
+    };
+  }
 }
