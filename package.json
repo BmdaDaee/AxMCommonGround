@@ -4,14 +4,16 @@
   "description": "CommonGround: relational state machine for couples",
   "private": true,
   "workspaces": [
-    "client",
-    "server",
-    "shared"
+    "packages/*"
   ],
   "scripts": {
     "dev": "pnpm -r --parallel dev",
     "build": "pnpm -r build",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "dev:client": "pnpm --filter @axm/cg-client dev",
+    "dev:server": "pnpm --filter @axm/cg-server dev",
+    "build:client": "pnpm --filter @axm/cg-client build",
+    "build:server": "pnpm --filter @axm/cg-server build"
   },
   "devDependencies": {
     "typescript": "^5.3.0"

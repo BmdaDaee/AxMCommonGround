@@ -11,36 +11,47 @@ A platform for couples to:
 - **Track progress** via XP and rank system (Advocate → Sovereign)
 - **Preserve memories** in DeeplyUs vault (encrypted, partner-only)
 
-## Monorepo Structure
+## Monorepo Structure (Hybrid Deployment)
 
 ```
 AxMCommonGround/
-├── client/                    # React 18 + TypeScript web UI (Vite)
-│   ├── src/
-│   │   ├── pages/            # 11 route pages (login, dashboard, messages, etc.)
-│   │   ├── components/       # Layout, reusable components
-│   │   ├── lib/              # tRPC client, theme tokens, utilities
-│   │   └── styles/           # Tailwind CSS + global styles
-│   ├── package.json
-│   └── README.md
+├── packages/
+│   ├── client/                  # React 18 + TypeScript web UI (Vercel/Netlify)
+│   │   ├── src/
+│   │   ├── package.json         # @axm/cg-client
+│   │   └── README.md
+│   │
+│   ├── server/                  # Express + tRPC + Drizzle API (Railway/Heroku)
+│   │   ├── src/
+│   │   ├── package.json         # @axm/cg-server
+│   │   └── README.md
+│   │
+│   └── shared/                  # TypeScript types & enums (shared by both)
+│       ├── types/
+│       ├── enums/
+│       └── package.json         # @axm/cg-shared
 │
-├── server/                    # Express + tRPC + Drizzle ORM API
-│   ├── src/
-│   │   ├── routes/           # tRPC router definitions
-│   │   ├── db/               # Drizzle schema, migrations
-│   │   ├── ai/               # AI integrations (Bently, Keystone)
-│   │   └── middleware/       # Auth, logging, validation
-│   ├── package.json
-│   └── README.md
-│
-├── shared/                    # TypeScript types, enums, constants
-│   ├── types/
-│   ├── enums/
-│   └── package.json
-│
-├── package.json              # Monorepo root (pnpm workspaces)
-└── README.md                 # This file
+├── package.json                 # Root workspace (pnpm)
+├── pnpm-workspace.yaml
+├── HYBRID_ARCHITECTURE.md       # Architecture docs
+├── DEPLOY_CLIENT.md             # Client deployment guide
+├── DEPLOY_SERVER.md             # Server deployment guide
+└── README.md                    # This file
 ```
+
+### Why Hybrid?
+
+**Monorepo** (development):
+- Shared types between client & server
+- Single dependency tree
+- Atomic commits
+- Easier refactoring
+
+**Hybrid Deployment** (production):
+- Client deploys independently (Vercel, Netlify, etc.)
+- Server deploys independently (Railway, Heroku, Docker, etc.)
+- Each scales separately
+- No deployment coupling
 
 ## Tech Stack
 
