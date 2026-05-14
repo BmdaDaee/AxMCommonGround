@@ -6,7 +6,7 @@ export const BentlyPage: React.FC = () => {
   >([
     {
       role: 'assistant',
-      content: 'Hey there. I'm Bently. I'm here to help you navigate this relational space with clarity and care. What's on your mind?',
+      content: "Hey there. I'm Bently. I'm here to help you navigate this relational space with clarity and care. What's on your mind?",
     },
   ]);
   const [input, setInput] = useState('');
@@ -22,7 +22,7 @@ export const BentlyPage: React.FC = () => {
         ...prev,
         {
           role: 'assistant',
-          content: 'I hear you. That sounds significant. Tell me more about how that's been sitting with you.',
+          content: "I hear you. That sounds significant. Tell me more about how that's been sitting with you.",
         },
       ]);
     }, 1000);

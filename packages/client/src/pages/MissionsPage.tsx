@@ -15,7 +15,7 @@ export const MissionsPage: React.FC = () => {
     {
       id: '1',
       title: 'Have a difficult conversation',
-      description: 'Discuss something that's been on your mind with your partner.',
+      description: "Discuss something that's been on your mind with your partner.",
       difficulty: 'medium',
       xpReward: 50,
       completed: false,

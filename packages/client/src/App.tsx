@@ -1,8 +1,11 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import Layout from './components/Layout';
+import { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { httpBatchLink } from '@trpc/client';
+import { trpc } from './lib/trpc';
+import superjson from 'superjson';
 
-// Import page components
+import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import DashboardPage from './pages/DashboardPage';
@@ -15,41 +18,48 @@ import DeeplyUsPage from './pages/DeeplyUsPage';
 import CalendarPage from './pages/CalendarPage';
 import SettingsPage from './pages/SettingsPage';
 
-function App() {
-  const isAuthenticated = !!localStorage.getItem('authToken');
+export default function App() {
+  const [queryClient] = useState(() => new QueryClient());
+  const [trpcClient] = useState(() =>
+    trpc.createClient({
+      links: [
+        httpBatchLink({
+          url: 'http://localhost:3000/trpc',
+          headers() {
+            const token = localStorage.getItem('token');
+            return {
+              Authorization: token ? `Bearer ${token}` : undefined,
+            };
+          },
+          transformer: superjson as any,
+        }),
+      ],
+    })
+  );
 
   return (
-    <Routes>
-      {/* Public Routes */}
-      <Route
-        path="/login"
-        element={isAuthenticated ? <Navigate to="/dashboard" /> : <LoginPage />}
-      />
-      <Route
-        path="/signup"
-        element={isAuthenticated ? <Navigate to="/dashboard" /> : <SignupPage />}
-      />
-
-      {/* Protected Routes */}
-      {isAuthenticated ? (
-        <Route element={<Layout />}>
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/messages" element={<MessagesPage />} />
-          <Route path="/bently" element={<BentlyPage />} />
-          <Route path="/xp" element={<XpPage />} />
-          <Route path="/missions" element={<MissionsPage />} />
-          <Route path="/journal" element={<JournalPage />} />
-          <Route path="/deeplyus" element={<DeeplyUsPage />} />
-          <Route path="/calendar" element={<CalendarPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/" element={<Navigate to="/dashboard" />} />
-          <Route path="*" element={<Navigate to="/dashboard" />} />
-        </Route>
-      ) : (
-        <Route path="*" element={<Navigate to="/login" />} />
-      )}
-    </Routes>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <Router>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
+            
+            <Route element={<Layout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/messages" element={<MessagesPage />} />
+              <Route path="/bently" element={<BentlyPage />} />
+              <Route path="/xp" element={<XpPage />} />
+              <Route path="/missions" element={<MissionsPage />} />
+              <Route path="/journal" element={<JournalPage />} />
+              <Route path="/deeplyus" element={<DeeplyUsPage />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+            </Route>
+          </Routes>
+        </Router>
+      </QueryClientProvider>
+    </trpc.Provider>
   );
 }
-
-export default App;
