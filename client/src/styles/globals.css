@@ -1,0 +1,307 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========================================
+   OBSIDIAN SOVEREIGN – BASE LAYER
+   ======================================== */
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    --color-bg-base: #080808;
+    --color-bg-elevated: #0F0F0F;
+    --color-bg-surface: #1A1A1A;
+    --color-primary: #D4AF37;
+    --color-accent: #9D4EDD;
+    --color-highlight: #E63946;
+    --color-text-primary: #F5F5F5;
+    --color-text-secondary: #B0B0B0;
+    --color-border: #1E1E1E;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply bg-bg-base text-text-primary font-sans;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-bg-base text-text-primary antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight text-text-primary;
+  }
+
+  h1 {
+    @apply text-4xl;
+  }
+
+  h2 {
+    @apply text-3xl;
+  }
+
+  h3 {
+    @apply text-2xl;
+  }
+
+  h4 {
+    @apply text-xl;
+  }
+
+  h5 {
+    @apply text-lg;
+  }
+
+  h6 {
+    @apply text-base;
+  }
+
+  p {
+    @apply text-text-primary leading-relaxed;
+  }
+
+  a {
+    @apply text-primary hover:text-primary-light transition-colors;
+  }
+
+  button {
+    @apply transition-all duration-base;
+  }
+
+  input,
+  textarea,
+  select {
+    @apply bg-bg-surface text-text-primary placeholder:text-text-tertiary border border-border rounded-md px-md py-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent;
+  }
+
+  input:disabled,
+  textarea:disabled,
+  select:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-bg-base;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border hover:bg-border-strong rounded-full;
+  }
+}
+
+/* ========================================
+   COMPONENT LAYER
+   ======================================== */
+
+@layer components {
+  /* Buttons */
+  .btn-primary {
+    @apply px-lg py-sm bg-primary text-bg-base font-semibold rounded-md hover:bg-primary-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply px-lg py-sm bg-bg-surface text-primary border border-primary rounded-md hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-ghost {
+    @apply px-lg py-sm text-text-primary hover:bg-bg-hover rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-accent {
+    @apply px-lg py-sm bg-accent text-bg-base font-semibold rounded-md hover:bg-accent-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  /* Cards */
+  .card {
+    @apply bg-bg-surface border border-border rounded-lg p-lg;
+  }
+
+  .card-hover {
+    @apply card hover:border-primary hover:shadow-md transition-all;
+  }
+
+  .card-elevated {
+    @apply card shadow-lg border-border-strong;
+  }
+
+  /* Typography utilities */
+  .text-muted {
+    @apply text-text-secondary;
+  }
+
+  .text-subtle {
+    @apply text-text-tertiary;
+  }
+
+  .text-highlight {
+    @apply text-highlight;
+  }
+
+  .text-gold {
+    @apply text-primary;
+  }
+
+  .text-purple {
+    @apply text-accent;
+  }
+
+  /* Sections */
+  .section-header {
+    @apply border-b border-border pb-lg mb-lg;
+  }
+
+  .section-divider {
+    @apply border-t border-border my-lg;
+  }
+
+  /* Badge */
+  .badge {
+    @apply inline-block px-sm py-xs rounded-full text-xs font-semibold;
+  }
+
+  .badge-primary {
+    @apply badge bg-primary text-bg-base;
+  }
+
+  .badge-accent {
+    @apply badge bg-accent text-bg-base;
+  }
+
+  .badge-highlight {
+    @apply badge bg-highlight text-bg-base;
+  }
+
+  .badge-status-aligned {
+    @apply badge bg-status-aligned text-bg-base;
+  }
+
+  .badge-status-stress {
+    @apply badge bg-status-stress text-bg-base;
+  }
+
+  .badge-status-tension {
+    @apply badge bg-status-tension text-bg-base;
+  }
+
+  .badge-status-stale {
+    @apply badge bg-status-stale text-bg-base;
+  }
+
+  /* Focus ring (accessible) */
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-bg-base;
+  }
+
+  /* Containers */
+  .container-narrow {
+    @apply max-w-3xl mx-auto px-lg;
+  }
+
+  .container-wide {
+    @apply max-w-6xl mx-auto px-lg;
+  }
+}
+
+/* ========================================
+   UTILITIES
+   ======================================== */
+
+@layer utilities {
+  /* Flexbox helpers */
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+
+  .flex-between {
+    @apply flex items-center justify-between;
+  }
+
+  .flex-col-center {
+    @apply flex flex-col items-center justify-center;
+  }
+
+  /* Grid helpers */
+  .grid-cols-auto {
+    @apply grid grid-cols-auto gap-lg;
+  }
+
+  /* Opacity */
+  .opacity-disabled {
+    @apply opacity-50;
+  }
+
+  /* Borders */
+  .border-subtle {
+    @apply border border-border;
+  }
+
+  .border-strong {
+    @apply border border-border-strong;
+  }
+
+  /* Hover states */
+  .hover-primary {
+    @apply hover:text-primary transition-colors;
+  }
+
+  .hover-bg-surface {
+    @apply hover:bg-bg-hover transition-colors;
+  }
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-gold {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@layer utilities {
+  .animate-fadeIn {
+    @apply animate-[fadeIn_200ms_ease-out];
+  }
+
+  .animate-slideIn {
+    @apply animate-[slideIn_300ms_ease-out];
+  }
+
+  .animate-pulse-gold {
+    @apply animate-[pulse-gold_2s_ease-in-out_infinite];
+  }
+}

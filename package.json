@@ -4,8 +4,9 @@
   "description": "CommonGround: relational state machine for couples",
   "private": true,
   "workspaces": [
+    "client",
     "server",
-    "client"
+    "shared"
   ],
   "scripts": {
     "dev": "pnpm -r --parallel dev",
