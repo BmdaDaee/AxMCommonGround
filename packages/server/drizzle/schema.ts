@@ -69,6 +69,16 @@ export const pairs = pgTable('pairs', {
   updatedAt,
 });
 
+export const inviteCodes = pgTable('invite_codes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  inviterId: uuid('inviter_id').notNull().references(() => users.id),
+  code: varchar('code', { length: 8 }).notNull().unique(),
+  pairId: uuid('pair_id').references(() => pairs.id),
+  status: varchar('status', { length: 16 }).notNull().default('PENDING'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  createdAt,
+});
+
 export const messages = pgTable('messages', {
   id: uuid('id').primaryKey().defaultRandom(),
   pairId: uuid('pair_id').notNull().references(() => pairs.id),
@@ -293,6 +303,7 @@ export const schemaTables = {
   authAccounts,
   sessions,
   pairs,
+  inviteCodes,
   messages,
   messageRewrites,
   voiceMessages,
