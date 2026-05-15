@@ -1,139 +1,176 @@
 import React from 'react';
-import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
+import { trpc } from '../lib/trpc';
 
-interface RelationalState {
-  state: 'ALIGNED' | 'STALE' | 'ONE_SIDED_STRESS' | 'TENSION';
-  lastUpdated: Date;
+type RelationalState = 'ALIGNED' | 'DORMANT' | 'MISALIGNED' | 'CAPACITY_BLOCKED' | 'TRUST_FRACTURED';
+
+const STATE_CONFIG: Record<RelationalState, {
+  color: string;
+  border: string;
+  label: string;
   description: string;
+}> = {
+  ALIGNED: {
+    color: '#10B981',
+    border: 'border-[#10B981]',
+    label: 'Aligned',
+    description: 'Both of you are showing up. The channel is open.',
+  },
+  DORMANT: {
+    color: '#6B7280',
+    border: 'border-[#6B7280]',
+    label: 'Dormant',
+    description: 'Things are stable but low-energy. The comfort is real — so is the drift.',
+  },
+  MISALIGNED: {
+    color: '#F59E0B',
+    border: 'border-[#F59E0B]',
+    label: 'Misaligned',
+    description: 'You have capacity. Your meanings are diverging. Not a crisis — a gap.',
+  },
+  CAPACITY_BLOCKED: {
+    color: '#9D4EDD',
+    border: 'border-[#9D4EDD]',
+    label: 'Capacity Blocked',
+    description: 'One or both of you is near limit. Deeper work is not available right now.',
+  },
+  TRUST_FRACTURED: {
+    color: '#E63946',
+    border: 'border-[#E63946]',
+    label: 'Trust Fractured',
+    description: 'Something broke. Repair requires action, not reassurance.',
+  },
+};
+
+function metricLabel(value: number): { label: string; color: string } {
+  if (value >= 70) return { label: 'HIGH', color: '#10B981' };
+  if (value >= 40) return { label: 'MED', color: '#F59E0B' };
+  return { label: 'LOW', color: '#E63946' };
 }
 
 export const DashboardPage: React.FC = () => {
-  const [relationalState] = React.useState<RelationalState>({
-    state: 'ALIGNED',
-    lastUpdated: new Date(),
-    description: 'You two are communicating clearly and moving forward together.',
-  });
+  const navigate = useNavigate();
 
-  const stateConfig: Record<string, { color: string; icon: string; bg: string }> = {
-    ALIGNED: {
-      color: 'text-status-aligned',
-      icon: '◆',
-      bg: 'bg-status-aligned/10 border-status-aligned',
-    },
-    STALE: {
-      color: 'text-status-stale',
-      icon: '◐',
-      bg: 'bg-status-stale/10 border-status-stale',
-    },
-    ONE_SIDED_STRESS: {
-      color: 'text-status-stress',
-      icon: '⚠',
-      bg: 'bg-status-stress/10 border-status-stress',
-    },
-    TENSION: {
-      color: 'text-status-tension',
-      icon: '✕',
-      bg: 'bg-status-tension/10 border-status-tension',
-    },
-  };
+  const pairQuery = trpc.pairs.getMyPair.useQuery();
+  const pairId = pairQuery.data?.id;
 
-  const config = stateConfig[relationalState.state];
+  const stateQuery = trpc.pairs.getRelationalState.useQuery(
+    { pairId: pairId! },
+    { enabled: !!pairId, refetchInterval: 60000 }
+  );
+
+  const isLoading = pairQuery.isLoading || stateQuery.isLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="font-mono text-xs uppercase tracking-widest text-[#808080] animate-pulse">
+          Reading state...
+        </p>
+      </div>
+    );
+  }
+
+  if (!pairQuery.data) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-6">
+        <p className="font-mono text-xs uppercase tracking-widest text-[#808080]">
+          No active pair
+        </p>
+        <button
+          onClick={() => navigate('/invite')}
+          className="bg-[#D4AF37] text-[#080808] px-8 py-3 font-mono text-xs uppercase tracking-widest hover:bg-[#E8C547] transition-colors"
+        >
+          Invite Partner
+        </button>
+      </div>
+    );
+  }
+
+  const state = (stateQuery.data?.state ?? 'DORMANT') as RelationalState;
+  const metrics = (stateQuery.data?.metrics ?? {}) as Record<string, number>;
+  const config = STATE_CONFIG[state] ?? STATE_CONFIG.DORMANT;
+  const explanation = (stateQuery.data as any)?.explanation ?? config.description;
+
+  const dimensions = [
+    { key: 'availability', label: 'Availability' },
+    { key: 'alignment', label: 'Alignment' },
+    { key: 'activation', label: 'Activation' },
+    { key: 'trust', label: 'Trust' },
+  ];
 
   return (
-    <div className="p-lg space-y-lg">
-      {/* Welcome section */}
-      <div>
-        <h2 className="text-2xl font-bold mb-sm">Dashboard</h2>
-        <p className="text-text-secondary">Overview of your relational health.</p>
+    <div className="space-y-8">
+      {/* State hero */}
+      <div className={`border-l-4 ${config.border} pl-8 py-6`}>
+        <p className="font-mono text-xs uppercase tracking-widest text-[#808080] mb-3">
+          Relational State
+        </p>
+        <h1
+          className="font-mono text-6xl uppercase tracking-tighter mb-4"
+          style={{ color: config.color }}
+        >
+          {config.label}
+        </h1>
+        <p className="text-[#B0B0B0] text-sm leading-relaxed max-w-lg">
+          {explanation}
+        </p>
       </div>
 
-      {/* Relational state card */}
-      <div
-        className={cn(
-          'card-elevated border-2 p-2xl',
-          config.bg
-        )}
-      >
-        <div className="flex items-start justify-between mb-lg">
-          <div>
-            <h3 className="text-lg font-semibold text-text-primary mb-sm">Relational State</h3>
-            <p className="text-text-secondary text-sm">{relationalState.description}</p>
-          </div>
-          <div className={cn('text-5xl', config.color)}>{config.icon}</div>
+      {/* Dimension metrics */}
+      <div className="border border-[#1E1E1E] bg-[#0F0F0F]">
+        <div className="px-6 py-4 border-b border-[#1E1E1E]">
+          <p className="font-mono text-xs uppercase tracking-widest text-[#808080]">
+            Signal Dimensions
+          </p>
         </div>
-
-        <div className="space-y-md">
-          <div className="flex items-center justify-between">
-            <span className="text-text-secondary text-sm">Current State</span>
-            <span className={cn('px-md py-sm rounded-full text-xs font-bold', config.bg)}>
-              {relationalState.state}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-text-secondary text-sm">Last Updated</span>
-            <span className="text-text-primary text-sm">
-              {relationalState.lastUpdated.toLocaleTimeString()}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-lg">
-        <div className="card">
-          <h4 className="text-sm font-semibold text-text-secondary mb-lg">Unread Messages</h4>
-          <p className="text-4xl font-bold text-primary">3</p>
-          <p className="text-xs text-text-tertiary mt-sm">From your partner</p>
-        </div>
-
-        <div className="card">
-          <h4 className="text-sm font-semibold text-text-secondary mb-lg">Pending Missions</h4>
-          <p className="text-4xl font-bold text-accent">2</p>
-          <p className="text-xs text-text-tertiary mt-sm">This week</p>
-        </div>
-
-        <div className="card">
-          <h4 className="text-sm font-semibold text-text-secondary mb-lg">XP Earned</h4>
-          <p className="text-4xl font-bold text-highlight">125</p>
-          <p className="text-xs text-text-tertiary mt-sm">This month</p>
-        </div>
-      </div>
-
-      {/* Quick actions */}
-      <div className="section-divider">
-        <h3 className="text-lg font-semibold mb-lg">Quick Actions</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-lg">
-          <button className="btn-primary w-full">Send a Message</button>
-          <button className="btn-secondary w-full">Start Bently Chat</button>
-          <button className="btn-ghost w-full">View Journal</button>
-          <button className="btn-accent w-full">Browse Missions</button>
-        </div>
-      </div>
-
-      {/* Recent activity */}
-      <div>
-        <h3 className="text-lg font-semibold mb-lg">Recent Activity</h3>
-        <div className="space-y-md">
-          {[
-            { time: '2 hours ago', action: 'Your partner sent a message', type: 'message' },
-            { time: '5 hours ago', action: 'Relational state updated to ALIGNED', type: 'state' },
-            {
-              time: '1 day ago',
-              action: 'Completed mission: "Have a difficult conversation"',
-              type: 'mission',
-            },
-          ].map((activity, idx) => (
-            <div key={idx} className="card hover-bg-surface cursor-pointer">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-text-primary font-medium">{activity.action}</p>
-                  <p className="text-xs text-text-tertiary">{activity.time}</p>
+        <div className="grid grid-cols-2 divide-x divide-y divide-[#1E1E1E]">
+          {dimensions.map(({ key, label }) => {
+            const value = metrics[key] ?? 50;
+            const { label: lvl, color } = metricLabel(value);
+            return (
+              <div key={key} className="px-6 py-5">
+                <p className="font-mono text-xs uppercase tracking-widest text-[#808080] mb-2">
+                  {label}
+                </p>
+                <div className="flex items-end gap-3">
+                  <p
+                    className="font-mono text-2xl uppercase tracking-tighter"
+                    style={{ color }}
+                  >
+                    {lvl}
+                  </p>
+                  <p className="font-mono text-xs text-[#808080] mb-1">
+                    {value}/100
+                  </p>
                 </div>
-                <span className="text-primary">→</span>
+                {/* Bar */}
+                <div className="mt-3 h-0.5 bg-[#1E1E1E] w-full">
+                  <div
+                    className="h-full transition-all duration-700"
+                    style={{ width: `${value}%`, backgroundColor: color }}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
+      </div>
+
+      {/* CTAs */}
+      <div className="flex gap-4">
+        <button
+          onClick={() => navigate('/bently')}
+          className="flex-1 bg-[#D4AF37] text-[#080808] py-4 font-mono text-xs uppercase tracking-widest hover:bg-[#E8C547] transition-colors"
+        >
+          Talk to Bently
+        </button>
+        <button
+          onClick={() => navigate('/messages')}
+          className="flex-1 border border-[#1E1E1E] text-[#B0B0B0] py-4 font-mono text-xs uppercase tracking-widest hover:border-[#2A2A2A] hover:text-[#F5F5F5] transition-colors"
+        >
+          Messages
+        </button>
       </div>
     </div>
   );
