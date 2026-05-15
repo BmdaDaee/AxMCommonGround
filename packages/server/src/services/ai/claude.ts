@@ -1,20 +1,58 @@
+// packages/server/src/services/ai/claude.ts
+// Full replacement — wires the real Anthropic SDK call.
+
+import Anthropic from '@anthropic-ai/sdk';
 import { env } from '../../config/env.js';
 import type { AiCompletionRequest, AiCompletionResponse, AiProvider } from './types.js';
 
 export class ClaudeProvider implements AiProvider {
+  private client: Anthropic | null = null;
+
+  private getClient(): Anthropic {
+    if (!this.client) {
+      if (!env.anthropicApiKey) {
+        throw new Error('ANTHROPIC_API_KEY is not set.');
+      }
+      this.client = new Anthropic({ apiKey: env.anthropicApiKey });
+    }
+    return this.client;
+  }
+
   async complete(request: AiCompletionRequest): Promise<AiCompletionResponse> {
-    if (!env.claudeApiKey) {
+    if (!env.anthropicApiKey) {
+      // Dev stub — keeps the server runnable without credentials
       return {
         provider: 'mock',
-        model: env.claudeModel,
-        content: `Claude provider is configured as a safe stub. Prompt messages: ${request.messages.length}.`,
+        model: env.anthropicModel,
+        content: '[Claude stub — set ANTHROPIC_API_KEY to enable]',
       };
     }
 
+    const client = this.getClient();
+
+    // Split system message from the rest
+    const systemMessage = request.messages.find((m) => m.role === 'system');
+    const conversationMessages = request.messages
+      .filter((m) => m.role !== 'system')
+      .map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }));
+
+    const response = await client.messages.create({
+      model: env.anthropicModel,
+      max_tokens: request.maxTokens ?? 1024,
+      temperature: request.temperature ?? 0.7,
+      ...(systemMessage ? { system: systemMessage.content } : {}),
+      messages: conversationMessages,
+    });
+
+    const textBlock = response.content.find((b) => b.type === 'text');
+
     return {
       provider: 'claude',
-      model: env.claudeModel,
-      content: 'Claude integration placeholder: wire Anthropic SDK call here when credentials and network policy are finalized.',
+      model: response.model,
+      content: textBlock?.type === 'text' ? textBlock.text : '',
     };
   }
 }
