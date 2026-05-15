@@ -8,6 +8,8 @@ import superjson from 'superjson';
 import Layout from './components/Layout';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import InvitePage from './pages/InvitePage';
+import JoinPage from './pages/JoinPage';
 import DashboardPage from './pages/DashboardPage';
 import MessagesPage from './pages/MessagesPage';
 import BentlyPage from './pages/BentlyPage';
@@ -24,7 +26,7 @@ export default function App() {
     trpc.createClient({
       links: [
         httpBatchLink({
-          url: 'http://localhost:3000/trpc',
+          url: `${import.meta.env.VITE_API_URL ?? 'http://localhost:3000'}/trpc`,
           headers() {
             const token = localStorage.getItem('token');
             return {
@@ -42,9 +44,15 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <Router>
           <Routes>
+            {/* Auth */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
-            
+
+            {/* Pair formation — no layout chrome */}
+            <Route path="/invite" element={<InvitePage />} />
+            <Route path="/join" element={<JoinPage />} />
+
+            {/* Main app */}
             <Route element={<Layout />}>
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/messages" element={<MessagesPage />} />
