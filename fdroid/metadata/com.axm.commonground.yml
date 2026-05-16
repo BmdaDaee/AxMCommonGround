@@ -1,0 +1,38 @@
+# F-Droid metadata for CommonGround
+# Place this at: fdroid/metadata/com.axm.commonground.yml
+# If self-hosting: add to your own F-Droid repo
+
+Categories:
+  - Connectivity
+
+License: UNLICENSED
+
+Name: CommonGround
+Summary: Relational state platform for couples
+Description: |
+  CommonGround is a communication infrastructure app for couples.
+  It tracks relational state across four dimensions and surfaces
+  insights through Bently, an AI communication mediator.
+  No ads. No data sold. Self-hostable backend.
+
+RepoType: git
+Repo: https://github.com/BmdaDaee/AxMCommonGround
+
+Builds:
+  - versionName: '1.0.0'
+    versionCode: 1
+    commit: main
+    subdir: packages/mobile
+    sudo:
+      - apt-get update
+      - apt-get install -y nodejs pnpm
+    prebuild:
+      - pnpm install
+    build:
+      - pnpm build:android
+    output: android/app/build/outputs/apk/release/app-release.apk
+
+AutoUpdateMode: None
+UpdateCheckMode: None
+CurrentVersion: '1.0.0'
+CurrentVersionCode: 1
