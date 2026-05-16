@@ -7,26 +7,25 @@
       "developmentClient": true,
       "distribution": "internal"
     },
-    "preview": {
+    "sideload": {
       "distribution": "internal",
       "ios": {
-        "simulator": false
-      }
-    },
-    "production": {
-      "autoIncrement": true
-    }
-  },
-  "submit": {
-    "production": {
-      "ios": {
-        "appleId": "your@apple.com",
-        "ascAppId": "YOUR_APP_STORE_CONNECT_ID",
-        "appleTeamId": "YOUR_TEAM_ID"
+        "simulator": false,
+        "enterpriseProvisioning": "adhoc"
       },
       "android": {
-        "serviceAccountKeyPath": "./google-service-account.json",
-        "track": "internal"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      }
+    },
+    "fdroid": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease",
+        "env": {
+          "REPRODUCIBLE_BUILD": "true"
+        }
       }
     }
   }
