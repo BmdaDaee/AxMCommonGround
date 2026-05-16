@@ -22,10 +22,26 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      }
+    },
+    "amazon": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
         "gradleCommand": ":app:assembleRelease",
         "env": {
-          "REPRODUCIBLE_BUILD": "true"
+          "AMAZON_BUILD": "true"
         }
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "ios": {
+        "simulator": false
       }
     }
   }
