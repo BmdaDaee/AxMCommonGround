@@ -1,28 +1,39 @@
-import cors from 'cors';
 import express from 'express';
-import { createExpressMiddleware } from '@trpc/server/adapters/express';
-import { appRouter } from './routers/index.js';
-import { createContext } from './trpc.js';
+import * as trpcExpress from '@trpc/server/adapters/express';
+import { appRouter } from './routers';
+import { createContext } from './trpc';
+import cors from 'cors';
 
-export function createApp() {
-  const app = express();
+const app = express();
 
-  app.use(cors());
-  app.use(express.json({ limit: '1mb' }));
+// Middleware
+app.use(cors());
+app.use(express.json());
 
-  // Health check - super simple, no dependencies
-  app.get('/health', (_req, res) => {
-    res.status(200).json({ status: 'ok' });
-  });
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
-  // tRPC router
-  app.use(
-    '/trpc',
-    createExpressMiddleware({
-      router: appRouter,
-      createContext,
-    }),
-  );
+// tRPC
+app.use(
+  '/trpc',
+  trpcExpress.createExpressMiddleware({
+    router: appRouter,
+    createContext,
+  })
+);
 
-  return app;
-}
+// Error handling
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error('Error:', err);
+  res.status(500).json({ error: 'Internal server error' });
+});
+
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`📡 tRPC endpoint: http://localhost:${PORT}/trpc`);
+});
+
+export default app;
