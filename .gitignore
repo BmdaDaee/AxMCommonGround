@@ -1,1 +1,7 @@
 .env
+.expo/
+node_modules/
+*.lock
+dist/
+build/
+

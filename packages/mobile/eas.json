@@ -15,22 +15,19 @@
         "enterpriseProvisioning": "adhoc"
       },
       "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
+        "buildType": "apk"
       }
     },
     "fdroid": {
       "distribution": "internal",
       "android": {
-        "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease"
+        "buildType": "apk"
       }
     },
     "amazon": {
       "distribution": "internal",
       "android": {
         "buildType": "apk",
-        "gradleCommand": ":app:assembleRelease",
         "env": {
           "AMAZON_BUILD": "true"
         }
@@ -39,11 +36,7 @@
     "production": {
       "autoIncrement": true,
       "android": {
-        "buildType": "app-bundle",
-        "gradleCommand": ":app:bundleRelease",
-        "env": {
-          "GRADLE_OPTS": "-Dorg.gradle.jvmargs=-Xmx4096m"
-        }
+        "buildType": "app-bundle"
       },
       "ios": {
         "simulator": false

@@ -25,12 +25,7 @@
         "backgroundColor": "#080808"
       },
       "package": "com.axm.commonground",
-      "versionCode": 1,
-      "buildAttributes": {
-        "minSdkVersion": 24,
-        "targetSdkVersion": 34,
-        "compileSdkVersion": 34
-      }
+      "versionCode": 1
     },
     "plugins": [
       "expo-router",
