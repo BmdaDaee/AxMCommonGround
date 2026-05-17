@@ -1,5 +1,5 @@
 // packages/server/src/services/ai/groq.ts
-// Groq provider - free, fast inference
+// Groq provider - free, fast inference (llama-3.3-70b-versatile)
 
 import type { AiProvider, AiResponse } from './types.js';
 
@@ -29,7 +29,7 @@ export class GroqProvider implements AiProvider {
         'Authorization': `Bearer ${this.apiKey}`,
       },
       body: JSON.stringify({
-        model: 'mixtral-8x7b-32768',
+        model: 'llama-3.3-70b-versatile',
         messages: options.messages,
         temperature: options.temperature ?? 0.7,
         max_tokens: options.maxTokens ?? 512,
