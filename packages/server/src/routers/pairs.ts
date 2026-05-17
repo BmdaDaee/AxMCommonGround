@@ -1,317 +1,129 @@
-// packages/server/src/routers/pairs.ts
-// Full replacement — adds invite code pair creation on top of existing routes.
-
 import { z } from 'zod';
-import { randomBytes } from 'node:crypto';
-import { router, publicProcedure } from '../trpc.js';
-import { TRPCError } from '@trpc/server';
-import { pairs, inviteCodes, users } from '../db/schema.js';
-import { eq, or, and, gt } from 'drizzle-orm';
-import { evaluateRelationalState } from '../engine/relationalEngine.js';
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+import { protectedProcedure, router } from '../trpc';
+import { db } from '../db';
+import { pairs, invites } from '../db/schema';
+import { eq, and } from 'drizzle-orm';
+import { randomBytes } from 'crypto';
 
 function generateInviteCode(): string {
-  // 8 chars, uppercase alphanumeric, unambiguous (no 0/O, 1/I/L)
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  const bytes = randomBytes(8);
-  return Array.from(bytes)
-    .map((b) => chars[b % chars.length])
-    .join('');
+  return randomBytes(4).toString('hex').toUpperCase();
 }
 
-const INVITE_TTL_HOURS = 48;
-
-// ─── Router ──────────────────────────────────────────────────────────────────
-
 export const pairsRouter = router({
+  createInvite: protectedProcedure.mutation(async ({ ctx }) => {
+    const inviteCode = generateInviteCode();
 
-  // ── Create invite code ────────────────────────────────────────────────────
-  // Call this when the first partner wants to invite their person.
-  // Returns a code the inviter shows to their partner (copy/share).
-  createInvite: publicProcedure
-    .mutation(async ({ ctx }) => {
-      if (!ctx.userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED' });
-      }
+    await db.insert(invites).values({
+      code: inviteCode,
+      createdBy: ctx.userId,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    });
 
-      const db = ctx.db!;
+    return { inviteCode };
+  }),
 
-      // Block if user already has an active pair
-      const existingPair = await db.query.pairs.findFirst({
-        where: and(
-          or(eq(pairs.user1Id, ctx.userId), eq(pairs.user2Id, ctx.userId)),
-          eq(pairs.status, 'ACTIVE'),
-        ),
-      });
-
-      if (existingPair) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'You are already in an active pair.',
-        });
-      }
-
-      // Expire any previous pending invites from this user
-      await db
-        .update(inviteCodes)
-        .set({ status: 'CANCELLED' })
+  acceptInvite: protectedProcedure
+    .input(z.object({ inviteCode: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Find invite
+      const inviteResult = await db
+        .select()
+        .from(invites)
         .where(
           and(
-            eq(inviteCodes.inviterId, ctx.userId),
-            eq(inviteCodes.status, 'PENDING'),
-          ),
+            eq(invites.code, input.inviteCode),
+            eq(invites.acceptedAt, null)
+          )
         );
 
-      const expiresAt = new Date(Date.now() + INVITE_TTL_HOURS * 60 * 60 * 1000);
-      const code = generateInviteCode();
-
-      const [invite] = await db
-        .insert(inviteCodes)
-        .values({
-          inviterId: ctx.userId,
-          code,
-          expiresAt,
-        })
-        .returning();
-
-      return {
-        code: invite.code,
-        expiresAt: invite.expiresAt,
-      };
-    }),
-
-  // ── Accept invite code ────────────────────────────────────────────────────
-  // Call this when the second partner enters the code they received.
-  // Creates the pair, activates it, and returns the pair object.
-  acceptInvite: publicProcedure
-    .input(z.object({ code: z.string().min(6).max(8).toUpperCase() }))
-    .mutation(async ({ input, ctx }) => {
-      if (!ctx.userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED' });
+      if (inviteResult.length === 0) {
+        throw new Error('Invalid or expired invite code');
       }
 
-      const db = ctx.db!;
+      const invite = inviteResult[0];
 
-      // Block if acceptor already has an active pair
-      const existingPair = await db.query.pairs.findFirst({
-        where: and(
-          or(eq(pairs.user1Id, ctx.userId), eq(pairs.user2Id, ctx.userId)),
-          eq(pairs.status, 'ACTIVE'),
-        ),
-      });
-
-      if (existingPair) {
-        throw new TRPCError({
-          code: 'CONFLICT',
-          message: 'You are already in an active pair.',
-        });
-      }
-
-      // Find the invite
-      const invite = await db.query.inviteCodes.findFirst({
-        where: and(
-          eq(inviteCodes.code, input.code),
-          eq(inviteCodes.status, 'PENDING'),
-          gt(inviteCodes.expiresAt, new Date()),
-        ),
-      });
-
-      if (!invite) {
-        throw new TRPCError({
-          code: 'NOT_FOUND',
-          message: 'Invite code is invalid, expired, or already used.',
-        });
-      }
-
-      // Can't pair with yourself
-      if (invite.inviterId === ctx.userId) {
-        throw new TRPCError({
-          code: 'BAD_REQUEST',
-          message: 'You cannot use your own invite code.',
-        });
-      }
-
-      // Create the pair
-      const [newPair] = await db
+      // Create pair
+      const pairResult = await db
         .insert(pairs)
         .values({
-          user1Id: invite.inviterId,
+          user1Id: invite.createdBy,
           user2Id: ctx.userId,
-          status: 'ACTIVE',
-          relationalState: 'DORMANT', // starts dormant — engine will update
-          relationalMetrics: {},
         })
-        .returning();
+        .returning({ id: pairs.id });
 
-      // Mark invite as accepted and link the pair
+      // Mark invite as accepted
       await db
-        .update(inviteCodes)
-        .set({ status: 'ACCEPTED', pairId: newPair.id })
-        .where(eq(inviteCodes.id, invite.id));
+        .update(invites)
+        .set({ acceptedAt: new Date() })
+        .where(eq(invites.id, invite.id));
 
-      return {
-        pair: newPair,
-        message: 'Pair created. CommonGround is now active.',
-      };
+      return { pairId: pairResult[0].id };
     }),
 
-  // ── Get invite status ─────────────────────────────────────────────────────
-  // Let the inviter poll or check if their code was accepted.
-  getInviteStatus: publicProcedure
-    .query(async ({ ctx }) => {
-      if (!ctx.userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED' });
+  getInviteStatus: protectedProcedure
+    .input(z.object({ inviteCode: z.string() }))
+    .query(async ({ input }) => {
+      const result = await db
+        .select()
+        .from(invites)
+        .where(eq(invites.code, input.inviteCode));
+
+      if (result.length === 0) {
+        return { status: 'not_found' };
       }
 
-      const db = ctx.db!;
+      const invite = result[0];
 
-      const invite = await db.query.inviteCodes.findFirst({
-        where: and(
-          eq(inviteCodes.inviterId, ctx.userId),
-          eq(inviteCodes.status, 'PENDING'),
-          gt(inviteCodes.expiresAt, new Date()),
-        ),
-      });
-
-      if (!invite) {
-        return { pending: false };
+      if (invite.acceptedAt) {
+        return { status: 'accepted' };
       }
 
-      return {
-        pending: true,
-        code: invite.code,
-        expiresAt: invite.expiresAt,
-      };
+      if (new Date() > invite.expiresAt) {
+        return { status: 'expired' };
+      }
+
+      return { status: 'pending' };
     }),
 
-  // ── Dissolve pair ─────────────────────────────────────────────────────────
-  dissolvePair: publicProcedure
-    .input(z.object({ pairId: z.string().uuid() }))
-    .mutation(async ({ input, ctx }) => {
-      if (!ctx.userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED' });
-      }
+  getMyPair: protectedProcedure.query(async ({ ctx }) => {
+    const result = await db
+      .select()
+      .from(pairs)
+      .where(
+        or(
+          eq(pairs.user1Id, ctx.userId),
+          eq(pairs.user2Id, ctx.userId)
+        )
+      );
 
-      const db = ctx.db!;
-
-      const pair = await db.query.pairs.findFirst({
-        where: and(
-          eq(pairs.id, input.pairId),
-          or(eq(pairs.user1Id, ctx.userId), eq(pairs.user2Id, ctx.userId)),
-        ),
-      });
-
-      if (!pair) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Pair not found.' });
-      }
-
-      await db
-        .update(pairs)
-        .set({ status: 'DISSOLVED' })
-        .where(eq(pairs.id, input.pairId));
-
-      return { dissolved: true };
-    }),
-
-  // ── Get current user's active pair ────────────────────────────────────────
-  getMyPair: publicProcedure
-    .query(async ({ ctx }) => {
-      if (!ctx.userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED' });
-      }
-
-      const db = ctx.db!;
-
-      const pair = await db.query.pairs.findFirst({
-        where: and(
-          or(eq(pairs.user1Id, ctx.userId), eq(pairs.user2Id, ctx.userId)),
-          eq(pairs.status, 'ACTIVE'),
-        ),
-      });
-
-      return pair ?? null;
-    }),
-
-  // ── Get relational state ──────────────────────────────────────────────────
-  getRelationalState: publicProcedure
-    .input(z.object({ pairId: z.string().uuid() }))
-    .query(async ({ input, ctx }) => {
-      if (!ctx.userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED' });
-      }
-
-      const db = ctx.db!;
-
-      const pair = await db.query.pairs.findFirst({
-        where: and(
-          eq(pairs.id, input.pairId),
-          or(eq(pairs.user1Id, ctx.userId), eq(pairs.user2Id, ctx.userId)),
-        ),
-      });
-
-      if (!pair) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Pair not found.' });
-      }
-
-      return {
-        state: pair.relationalState,
-        metrics: pair.relationalMetrics,
-      };
-    }),
-
-  // ── Derive state (manual trigger) ─────────────────────────────────────────
-  // Currently uses stored metrics. Wire signal collector here in next pass.
-  deriveState: publicProcedure
-    .input(z.object({ pairId: z.string().uuid() }))
-    .mutation(async ({ input, ctx }) => {
-      if (!ctx.userId) {
-        throw new TRPCError({ code: 'UNAUTHORIZED' });
-      }
-
-      const db = ctx.db!;
-
-      const pair = await db.query.pairs.findFirst({
-        where: and(
-          eq(pairs.id, input.pairId),
-          or(eq(pairs.user1Id, ctx.userId), eq(pairs.user2Id, ctx.userId)),
-        ),
-      });
-
-      if (!pair) {
-        throw new TRPCError({ code: 'NOT_FOUND', message: 'Pair not found.' });
-      }
-
-      const currentMetrics = (pair.relationalMetrics as any) || {};
-      const signals = {
-        availability: currentMetrics.availability || 50,
-        alignment: currentMetrics.alignment || 50,
-        activation: currentMetrics.activation || 50,
-        trust: currentMetrics.trust || 50,
-      };
-
-      const evaluation = evaluateRelationalState(signals);
-
-      await db
-        .update(pairs)
-        .set({
-          relationalState: evaluation.state,
-          relationalMetrics: evaluation.dimensions,
-        })
-        .where(eq(pairs.id, input.pairId));
-
-      return evaluation;
-    }),
-
-  // ── List all user's pairs (including dissolved) ───────────────────────────
-  list: publicProcedure.query(async ({ ctx }) => {
-    if (!ctx.userId) {
-      throw new TRPCError({ code: 'UNAUTHORIZED' });
+    if (result.length === 0) {
+      return null;
     }
 
-    const db = ctx.db!;
-    return db.query.pairs.findMany({
-      where: or(eq(pairs.user1Id, ctx.userId), eq(pairs.user2Id, ctx.userId)),
-    });
+    return result[0];
   }),
+
+  dissolvePair: protectedProcedure
+    .input(z.object({ pairId: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify user is part of this pair
+      const pairResult = await db
+        .select()
+        .from(pairs)
+        .where(eq(pairs.id, input.pairId));
+
+      if (pairResult.length === 0) {
+        throw new Error('Pair not found');
+      }
+
+      const pair = pairResult[0];
+      if (pair.user1Id !== ctx.userId && pair.user2Id !== ctx.userId) {
+        throw new Error('Not authorized');
+      }
+
+      // Delete pair
+      await db.delete(pairs).where(eq(pairs.id, input.pairId));
+
+      return { success: true };
+    }),
 });
