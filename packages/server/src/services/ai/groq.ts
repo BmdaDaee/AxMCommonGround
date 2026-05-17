@@ -1,7 +1,7 @@
 // packages/server/src/services/ai/groq.ts
 // Groq provider - free, fast inference (llama-3.3-70b-versatile)
 
-import type { AiProvider, AiResponse } from './types.js';
+import type { AiProvider, AiCompletionRequest, AiCompletionResponse } from './types.js';
 
 export class GroqProvider implements AiProvider {
   private apiKey: string;
@@ -13,11 +13,7 @@ export class GroqProvider implements AiProvider {
     }
   }
 
-  async complete(options: {
-    messages: Array<{ role: string; content: string }>;
-    temperature?: number;
-    maxTokens?: number;
-  }): Promise<AiResponse> {
+  async complete(options: AiCompletionRequest): Promise<AiCompletionResponse> {
     if (!this.apiKey) {
       throw new Error('GROQ_API_KEY not configured');
     }
@@ -44,11 +40,8 @@ export class GroqProvider implements AiProvider {
     const data = (await response.json()) as any;
     return {
       content: data.choices[0].message.content,
-      provider: 'groq',
-      usage: {
-        inputTokens: data.usage.prompt_tokens,
-        outputTokens: data.usage.completion_tokens,
-      },
+      provider: 'groq' as const,
+      model: 'llama-3.3-70b-versatile',
     };
   }
 }
