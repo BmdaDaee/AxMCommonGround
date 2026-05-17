@@ -1,92 +1,113 @@
-// packages/mobile/app/(onboarding)/join.tsx
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, TextInput, TouchableOpacity, Text, StyleSheet, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { trpc } from '../../src/lib/trpc';
 
 export default function JoinScreen() {
+  const [inviteCode, setInviteCode] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const [code, setCode] = useState('');
-  const [error, setError] = useState('');
+  const acceptInviteMutation = trpc.pairs.acceptInvite.useMutation();
 
-  const acceptInvite = trpc.pairs.acceptInvite.useMutation({
-    onSuccess: async () => {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  const handleJoin = async () => {
+    if (!inviteCode.trim()) {
+      Alert.alert('Error', 'Please enter an invite code');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await acceptInviteMutation.mutateAsync({ inviteCode: inviteCode.trim() });
+      
+      Alert.alert('Success', 'Connected with your partner!');
+      
+      // Navigate to dashboard
       router.replace('/(app)/dashboard');
-    },
-    onError: (err) => {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      setError(err.message ?? 'Invalid or expired code.');
-    },
-  });
-
-  const handleChange = (val: string) => {
-    const clean = val.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
-    setCode(clean);
-    if (error) setError('');
-  };
-
-  const handleSubmit = () => {
-    if (code.length !== 8) { setError('Code must be 8 characters.'); return; }
-    setError('');
-    acceptInvite.mutate({ code });
+    } catch (error) {
+      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to join');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <View style={s.container}>
-      <Text style={s.label}>CommonGround</Text>
-      <Text style={s.heading}>Enter Code</Text>
-      <Text style={s.sub}>
-        Your partner generated a code. Enter it here to connect.
-      </Text>
-
+    <View style={styles.container}>
+      <Text style={styles.title}>Join a Pair</Text>
+      <Text style={styles.subtitle}>Enter the invite code your partner shared</Text>
+      
       <TextInput
-        style={s.input}
-        value={code}
-        onChangeText={handleChange}
-        placeholder="A1B2C3D4"
-        placeholderTextColor="#2A2A2A"
+        style={styles.input}
+        placeholder="Invite Code"
+        value={inviteCode}
+        onChangeText={setInviteCode}
+        editable={!loading}
+        placeholderTextColor="#999"
         autoCapitalize="characters"
-        autoCorrect={false}
-        maxLength={8}
-        autoFocus
       />
-
-      {error ? <Text style={s.error}>{error}</Text> : null}
-
-      <View style={s.actions}>
-        <TouchableOpacity
-          style={[s.btnPrimary, (code.length !== 8 || acceptInvite.isPending) && s.disabled]}
-          onPress={handleSubmit}
-          disabled={code.length !== 8 || acceptInvite.isPending}
-        >
-          <Text style={s.btnPrimaryText}>
-            {acceptInvite.isPending ? 'Connecting...' : 'Connect'}
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={s.btnSecondary}
-          onPress={() => router.push('/(onboarding)/invite')}
-        >
-          <Text style={s.btnSecondaryText}>Generate Code Instead</Text>
-        </TouchableOpacity>
-      </View>
+      
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleJoin}
+        disabled={loading}
+      >
+        <Text style={styles.buttonText}>{loading ? 'Joining...' : 'Join'}</Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity onPress={() => router.push('/(onboarding)/invite')}>
+        <Text style={styles.link}>Or create a new invite</Text>
+      </TouchableOpacity>
     </View>
   );
 }
 
-const s = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#080808', padding: 32, justifyContent: 'center' },
-  label: { fontFamily: 'SpaceMono', fontSize: 10, color: '#808080', letterSpacing: 4, textTransform: 'uppercase', marginBottom: 8 },
-  heading: { fontFamily: 'SpaceMono', fontSize: 36, color: '#F5F5F5', letterSpacing: -1, textTransform: 'uppercase', marginBottom: 12 },
-  sub: { fontSize: 14, color: '#808080', lineHeight: 22, marginBottom: 48 },
-  input: { fontFamily: 'SpaceMono', fontSize: 32, color: '#D4AF37', letterSpacing: 10, textAlign: 'center', backgroundColor: '#0F0F0F', borderWidth: 1, borderColor: '#1E1E1E', padding: 24, marginBottom: 8 },
-  error: { fontFamily: 'SpaceMono', fontSize: 10, color: '#E63946', letterSpacing: 2, textTransform: 'uppercase', marginBottom: 24 },
-  actions: { gap: 12, marginTop: 24 },
-  btnPrimary: { backgroundColor: '#D4AF37', padding: 16, alignItems: 'center' },
-  btnPrimaryText: { fontFamily: 'SpaceMono', fontSize: 11, color: '#080808', letterSpacing: 3, textTransform: 'uppercase' },
-  btnSecondary: { borderWidth: 1, borderColor: '#1E1E1E', padding: 16, alignItems: 'center' },
-  btnSecondaryText: { fontFamily: 'SpaceMono', fontSize: 11, color: '#B0B0B0', letterSpacing: 3, textTransform: 'uppercase' },
-  disabled: { opacity: 0.3 },
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: '#080808',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#D4AF37',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#999',
+    marginBottom: 30,
+    textAlign: 'center',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#333',
+    padding: 15,
+    marginBottom: 20,
+    borderRadius: 8,
+    color: '#fff',
+    backgroundColor: '#111',
+    fontSize: 18,
+    textAlign: 'center',
+  },
+  button: {
+    backgroundColor: '#D4AF37',
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+  buttonText: {
+    color: '#080808',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  link: {
+    color: '#D4AF37',
+    textAlign: 'center',
+    marginTop: 20,
+  },
 });
