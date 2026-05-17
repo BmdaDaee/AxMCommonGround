@@ -1,0 +1,10 @@
+#!/bin/bash
+set -e
+
+echo "Installing dependencies with pnpm..."
+pnpm install --no-frozen-lockfile
+
+echo "Building @axmcommonground/server..."
+pnpm --filter @axmcommonground/server build
+
+echo "Build complete"
