@@ -16,7 +16,10 @@
       "bundleIdentifier": "com.axm.commonground",
       "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSCameraUsageDescription": "CommonGround needs access to your camera for secure identity verification.",
+        "NSMicrophoneUsageDescription": "CommonGround needs access to your microphone for voice features.",
+        "NSPhotoLibraryUsageDescription": "CommonGround needs access to your photos to share moments."
       }
     },
     "android": {
@@ -25,11 +28,31 @@
         "backgroundColor": "#080808"
       },
       "package": "com.axm.commonground",
-      "versionCode": 1
+      "versionCode": 1,
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "expo-haptics",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          },
+          "android": {
+            "minSdkVersion": 24,
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34
+          }
+        }
+      ]
     ],
     "scheme": "commonground",
     "extra": {

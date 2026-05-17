@@ -4,7 +4,7 @@ import superjson from 'superjson';
 import * as SecureStore from 'expo-secure-store';
 import type { AppRouter } from '../../../server/src/routers';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://axmcommonground-production.up.railway.app';
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://cgo.anarchyxmayhem.com';
 
 export const trpc = createTRPCReact<AppRouter>();
 
