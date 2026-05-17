@@ -1,0 +1,6 @@
+# Tell Railway to use Dockerfile, not NIXPACKS
+# Any file here will be ignored by Railway's builder detection
+pnpm-workspace.yaml
+package.json
+pnpm-lock.yaml
+.npmrc
