@@ -61,7 +61,8 @@ Name the rupture carefully. Validate that repair requires observable action, not
 Suggest one concrete, small, keepable commitment. Nothing grand.`,
   };
 
-  return \`\${basePrompt}\n\${stateDirectives[state] ?? stateDirectives.DORMANT}\`;
+  return `${basePrompt}\n${stateDirectives[state] ?? stateDirectives.DORMANT}`;
+
 }
 
 // Router
