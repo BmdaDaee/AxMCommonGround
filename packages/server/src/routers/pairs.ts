@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { protectedProcedure, router } from '../trpc';
 import { db } from '../db';
 import { pairs, invites } from '../db/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, or } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 
 function generateInviteCode(): string {
