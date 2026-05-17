@@ -13,7 +13,7 @@
     "preset": "jest-expo"
   },
   "dependencies": {
-    "@react-navigation/bottom-tabs": "^7.16.0",
+    "@react-navigation/bottom-tabs": "^6.5.0",
     "@react-navigation/native": "^6.1.18",
     "@tanstack/react-query": "^5.100.10",
     "@trpc/client": "^11.17.0",
