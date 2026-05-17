@@ -1,46 +1,43 @@
-import { initTRPC } from '@trpc/server';
-import { randomUUID } from 'node:crypto';
-import superjson from 'superjson';
-import type { CreateExpressContextOptions } from '@trpc/server/adapters/express';
-import { db } from './db/client.js';
+import { initTRPC, TRPCError } from '@trpc/server';
+import { CreateExpressContextOptions } from '@trpc/server/adapters/express';
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-key';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
 
-export interface Context {
-  db: typeof db;
-  requestId: string;
-  userId?: string;
-}
+export async function createContext({ req, res }: CreateExpressContextOptions) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  let userId: string | null = null;
 
-export function createContext({ req }: CreateExpressContextOptions): Context {
-  const headerRequestId = req.header('x-request-id');
-  const authHeader = req.header('authorization');
-  
-  let userId: string | undefined;
-  
-  if (authHeader?.startsWith('Bearer ')) {
-    const token = authHeader.replace('Bearer ', '');
-    if (token.startsWith('dev-user-')) {
-      userId = token.replace('dev-user-', '');
-    } else {
-      try {
-        const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-        userId = decoded.userId;
-      } catch (err) {
-        // Invalid token
-      }
+  if (token) {
+    try {
+      const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+      userId = decoded.userId;
+    } catch (error) {
+      // Token invalid, continue as unauthenticated
     }
   }
 
-  return {
-    db,
-    requestId: headerRequestId ?? randomUUID(),
-    userId,
-  };
+  return { userId, req, res };
 }
 
-const t = initTRPC.context<Context>().create({ transformer: superjson });
+export type Context = Awaited<ReturnType<typeof createContext>>;
+
+const t = initTRPC.context<Context>().create();
 
 export const router = t.router;
 export const publicProcedure = t.procedure;
+export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+  if (!ctx.userId) {
+    throw new TRPCError({
+      code: 'UNAUTHORIZED',
+      message: 'Not authenticated',
+    });
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      userId: ctx.userId,
+    },
+  });
+});
