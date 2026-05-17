@@ -1,28 +1,27 @@
 import { z } from 'zod';
-import { protectedProcedure, router } from '../trpc';
-import { db } from '../db';
-import { messages, pairs } from '../db/schema';
-import { eq, and, or, desc } from 'drizzle-orm';
+import { protectedProcedure, router } from '../trpc.js';
+import { db as dbClient } from '../db/index.js';
+import { messages, pairs } from '../db/schema.js';
+import { eq } from 'drizzle-orm';
+
+const db = dbClient!;
 
 export const messagesRouter = router({
   sendMessage: protectedProcedure
     .input(z.object({ pairId: z.string(), content: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // Verify user is in this pair
+      // Verify user is in pair
       const pairResult = await db
         .select()
         .from(pairs)
-        .where(
-          and(
-            eq(pairs.id, input.pairId),
-            or(
-              eq(pairs.user1Id, ctx.userId),
-              eq(pairs.user2Id, ctx.userId)
-            )
-          )
-        );
+        .where(eq(pairs.id, input.pairId));
 
       if (pairResult.length === 0) {
+        throw new Error('Pair not found');
+      }
+
+      const pair = pairResult[0];
+      if (pair.user1Id !== ctx.userId && pair.user2Id !== ctx.userId) {
         throw new Error('Not authorized');
       }
 
@@ -31,8 +30,9 @@ export const messagesRouter = router({
         .insert(messages)
         .values({
           pairId: input.pairId,
-          senderId: ctx.userId,
+          userId: ctx.userId!,
           content: input.content,
+          type: 'TEXT',
         })
         .returning({ id: messages.id });
 
@@ -42,32 +42,11 @@ export const messagesRouter = router({
   getMessages: protectedProcedure
     .input(z.object({ pairId: z.string() }))
     .query(async ({ ctx, input }) => {
-      // Verify user is in this pair
-      const pairResult = await db
-        .select()
-        .from(pairs)
-        .where(
-          and(
-            eq(pairs.id, input.pairId),
-            or(
-              eq(pairs.user1Id, ctx.userId),
-              eq(pairs.user2Id, ctx.userId)
-            )
-          )
-        );
-
-      if (pairResult.length === 0) {
-        throw new Error('Not authorized');
-      }
-
-      // Get messages
       const result = await db
         .select()
         .from(messages)
-        .where(eq(messages.pairId, input.pairId))
-        .orderBy(desc(messages.createdAt))
-        .limit(50);
+        .where(eq(messages.pairId, input.pairId));
 
-      return result.reverse();
+      return result;
     }),
 });

@@ -14,7 +14,10 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.axm.commonground",
-      "buildNumber": "1"
+      "buildNumber": "1",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -30,8 +33,11 @@
     ],
     "scheme": "commonground",
     "extra": {
+      "router": {
+        "origin": false
+      },
       "eas": {
-        "projectId": "axm-commonground"
+        "projectId": "21c7aff0-6263-47b8-8f17-6ccabab6f504"
       }
     }
   }

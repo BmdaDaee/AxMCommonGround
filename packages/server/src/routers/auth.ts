@@ -1,16 +1,17 @@
 import { z } from 'zod';
-import { publicProcedure, router } from '../trpc';
+import { publicProcedure, router } from '../trpc.js';
 import { hash, verify } from 'argon2';
 import jwt from 'jsonwebtoken';
-import { db } from '../db';
-import { users } from '../db/schema';
+import { db as dbClient } from '../db/index.js';
+import { users, authAccounts } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret';
+const db = dbClient!;
 
 export const authRouter = router({
   signup: publicProcedure
-    .input(z.object({ email: z.string().email(), password: z.string().min(8) }))
+    .input(z.object({ email: z.string().email(), password: z.string().min(8), name: z.string().min(1) }))
     .mutation(async ({ input }) => {
       // Check if user exists
       const existing = await db
@@ -26,15 +27,23 @@ export const authRouter = router({
       const hashedPassword = await hash(input.password);
 
       // Create user
-      const result = await db
+      const userResult = await db
         .insert(users)
         .values({
           email: input.email,
-          passwordHash: hashedPassword,
+          name: input.name,
         })
         .returning({ id: users.id });
 
-      const userId = result[0].id;
+      const userId = userResult[0].id;
+
+      // Create auth account
+      await db.insert(authAccounts).values({
+        userId,
+        provider: 'password',
+        providerAccountId: input.email,
+        passwordHash: hashedPassword,
+      });
 
       // Generate token
       const token = jwt.sign({ userId, email: input.email }, JWT_SECRET, {
@@ -48,19 +57,31 @@ export const authRouter = router({
     .input(z.object({ email: z.string().email(), password: z.string() }))
     .mutation(async ({ input }) => {
       // Find user
-      const result = await db
+      const userResult = await db
         .select()
         .from(users)
         .where(eq(users.email, input.email));
 
-      if (result.length === 0) {
+      if (userResult.length === 0) {
         throw new Error('User not found');
       }
 
-      const user = result[0];
+      const user = userResult[0];
+
+      // Find auth account
+      const authResult = await db
+        .select()
+        .from(authAccounts)
+        .where(eq(authAccounts.userId, user.id));
+
+      if (authResult.length === 0 || !authResult[0].passwordHash) {
+        throw new Error('Invalid credentials');
+      }
+
+      const authAccount = authResult[0];
 
       // Verify password
-      const isValid = await verify(user.passwordHash, input.password);
+      const isValid = await verify(authAccount.passwordHash!, input.password);
       if (!isValid) {
         throw new Error('Invalid password');
       }

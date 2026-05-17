@@ -1,9 +1,11 @@
 import { z } from 'zod';
-import { protectedProcedure, router } from '../trpc';
-import { db } from '../db';
-import { pairs, invites } from '../db/schema';
-import { eq, and, or } from 'drizzle-orm';
+import { protectedProcedure, router } from '../trpc.js';
+import { db as dbClient } from '../db/index.js';
+import { pairs, inviteCodes } from '../db/schema.js';
+import { eq, or } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
+
+const db = dbClient!;
 
 function generateInviteCode(): string {
   return randomBytes(4).toString('hex').toUpperCase();
@@ -13,9 +15,9 @@ export const pairsRouter = router({
   createInvite: protectedProcedure.mutation(async ({ ctx }) => {
     const inviteCode = generateInviteCode();
 
-    await db.insert(invites).values({
+    await db.insert(inviteCodes).values({
       code: inviteCode,
-      createdBy: ctx.userId,
+      inviterId: ctx.userId!,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     });
 
@@ -28,36 +30,39 @@ export const pairsRouter = router({
       // Find invite
       const inviteResult = await db
         .select()
-        .from(invites)
-        .where(
-          and(
-            eq(invites.code, input.inviteCode),
-            eq(invites.acceptedAt, null)
-          )
-        );
+        .from(inviteCodes)
+        .where(eq(inviteCodes.code, input.inviteCode));
 
       if (inviteResult.length === 0) {
-        throw new Error('Invalid or expired invite code');
+        throw new Error('Invite code not found');
       }
 
       const invite = inviteResult[0];
+
+      // Check expiration
+      if (invite.expiresAt < new Date()) {
+        throw new Error('Invite code expired');
+      }
 
       // Create pair
       const pairResult = await db
         .insert(pairs)
         .values({
-          user1Id: invite.createdBy,
-          user2Id: ctx.userId,
+          user1Id: invite.inviterId,
+          user2Id: ctx.userId!,
+          status: 'ACTIVE',
         })
         .returning({ id: pairs.id });
 
-      // Mark invite as accepted
-      await db
-        .update(invites)
-        .set({ acceptedAt: new Date() })
-        .where(eq(invites.id, invite.id));
+      const pairId = pairResult[0].id;
 
-      return { pairId: pairResult[0].id };
+      // Update invite
+      await db
+        .update(inviteCodes)
+        .set({ pairId, status: 'ACCEPTED' })
+        .where(eq(inviteCodes.id, invite.id));
+
+      return { pairId };
     }),
 
   getInviteStatus: protectedProcedure
@@ -65,24 +70,14 @@ export const pairsRouter = router({
     .query(async ({ input }) => {
       const result = await db
         .select()
-        .from(invites)
-        .where(eq(invites.code, input.inviteCode));
+        .from(inviteCodes)
+        .where(eq(inviteCodes.code, input.inviteCode));
 
       if (result.length === 0) {
-        return { status: 'not_found' };
+        return { status: 'NOT_FOUND' };
       }
 
-      const invite = result[0];
-
-      if (invite.acceptedAt) {
-        return { status: 'accepted' };
-      }
-
-      if (new Date() > invite.expiresAt) {
-        return { status: 'expired' };
-      }
-
-      return { status: 'pending' };
+      return { status: result[0].status };
     }),
 
   getMyPair: protectedProcedure.query(async ({ ctx }) => {
@@ -91,8 +86,8 @@ export const pairsRouter = router({
       .from(pairs)
       .where(
         or(
-          eq(pairs.user1Id, ctx.userId),
-          eq(pairs.user2Id, ctx.userId)
+          eq(pairs.user1Id, ctx.userId!),
+          eq(pairs.user2Id, ctx.userId!)
         )
       );
 
@@ -106,23 +101,10 @@ export const pairsRouter = router({
   dissolvePair: protectedProcedure
     .input(z.object({ pairId: z.string() }))
     .mutation(async ({ ctx, input }) => {
-      // Verify user is part of this pair
-      const pairResult = await db
-        .select()
-        .from(pairs)
+      await db
+        .update(pairs)
+        .set({ status: 'DISSOLVED' })
         .where(eq(pairs.id, input.pairId));
-
-      if (pairResult.length === 0) {
-        throw new Error('Pair not found');
-      }
-
-      const pair = pairResult[0];
-      if (pair.user1Id !== ctx.userId && pair.user2Id !== ctx.userId) {
-        throw new Error('Not authorized');
-      }
-
-      // Delete pair
-      await db.delete(pairs).where(eq(pairs.id, input.pairId));
 
       return { success: true };
     }),

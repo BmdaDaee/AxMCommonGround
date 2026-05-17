@@ -1,14 +1,13 @@
-import { router } from './trpc';
-import { authRouter } from './routers/auth';
-import { pairsRouter } from './routers/pairs';
-import { messagesRouter } from './routers/messages';
-import { bentlyRouter } from './routers/bently';
+import { router } from '../trpc.js';
+import { authRouter } from './auth.js';
+import { pairsRouter } from './pairs.js';
+import { messagesRouter } from './messages.js';
 
 export const appRouter = router({
   auth: authRouter,
   pairs: pairsRouter,
   messages: messagesRouter,
-  bently: bentlyRouter,
+  // bently and xp routers disabled for now
 });
 
 export type AppRouter = typeof appRouter;
