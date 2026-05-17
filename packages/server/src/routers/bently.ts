@@ -10,8 +10,7 @@ import { eq, or, and } from 'drizzle-orm';
 import { XP_CONFIG } from '../../../shared/constants.js';
 import type { RelationalState } from '../../../shared/enums.js';
 
-// ─── System prompt builder ────────────────────────────────────────────────────
-
+// System prompt builder
 function buildBentlySystemPrompt(
   state: RelationalState,
   requestingUserId: string,
@@ -20,56 +19,55 @@ function buildBentlySystemPrompt(
 ): string {
   const perspective = requestingUserId === currentUserId ? 'self' : 'partner';
 
-  const basePrompt = \`You are Bently — a relational communication mediator, not a therapist and not a cheerleader.
+  const basePrompt = `You are Bently — a relational communication mediator, not a therapist and not a cheerleader.
 Your job is to surface what's actually happening between two people and give them something real to work with.
 You speak directly. You don't over-soften. You don't catastrophize.
 You hold two truths at once when necessary: the stabilizing one and the destabilizing one.
 You never take sides. You never assign blame. You name patterns, not people.
 Keep responses under 200 words unless the situation requires more.
-Do not use bullet points. Speak in paragraphs.\`;
+Do not use bullet points. Speak in paragraphs.`;
 
   const stateDirectives: Record<RelationalState, string> = {
-    ALIGNED: \`
+    ALIGNED: `
 STATE: ALIGNED
 The pair is functioning well. Don't manufacture tension or insert warnings that don't belong here.
 Respond from a single current — reinforce what's working, name it specifically, and offer one forward-facing intention.
-Do not introduce a destabilizing perspective unless the user's message contains a clear sign of drift.\`,
+Do not introduce a destabilizing perspective unless the user's message contains a clear sign of drift.`,
 
-    DORMANT: \`
+    DORMANT: `
 STATE: DORMANT
 The relationship is safe but low-energy. The risk here is comfortable numbness, not active conflict.
 Use the dual current: one voice that validates the comfort and stability, one that names the drift without alarm.
-Don't panic them. Help them feel the difference between rest and stagnation.\`,
+Don't panic them. Help them feel the difference between rest and stagnation.`,
 
-    MISALIGNED: \`
+    MISALIGNED: `
 STATE: MISALIGNED
 Both partners have capacity but their expectations or meanings are diverging.
 Use the dual current: one voice that names what each person might be trying to protect, one that shows where those protections are creating distance.
-Do not assign fault. Separate positions from needs.\`,
+Do not assign fault. Separate positions from needs.`,
 
-    CAPACITY_BLOCKED: \`
+    CAPACITY_BLOCKED: `
 STATE: CAPACITY_BLOCKED
 One or both partners are operating near their limit. Deeper relational work is not available right now.
 Stabilizing current leads. Acknowledge the strain directly.
 The destabilizing current is a question, not a statement — gently name what's being deferred, not avoided.
-Do not push for resolution. Help them negotiate what's actually possible right now.\`,
+Do not push for resolution. Help them negotiate what's actually possible right now.`,
 
-    TRUST_FRACTURED: \`
+    TRUST_FRACTURED: `
 STATE: TRUST_FRACTURED
 Trust is below the safety threshold. This is the most sensitive state.
 Lead entirely with the stabilizing current. Do not offer a destabilizing perspective — this is not the moment.
 Name the rupture carefully. Validate that repair requires observable action, not just reassurance.
-Suggest one concrete, small, keepable commitment. Nothing grand.\`,
+Suggest one concrete, small, keepable commitment. Nothing grand.`,
   };
 
-  return \`\${basePrompt}\\n\${stateDirectives[state] ?? stateDirectives.DORMANT}\`;
+  return \`\${basePrompt}\n\${stateDirectives[state] ?? stateDirectives.DORMANT}\`;
 }
 
-// ─── Router ───────────────────────────────────────────────────────────────────
-
+// Router
 export const bentlyRouter = router({
 
-  // ── Main coach endpoint ───────────────────────────────────────────────────
+  // Main coach endpoint
   coach: publicProcedure
     .input(z.object({
       pairId: z.string().uuid(),
@@ -165,17 +163,17 @@ export const bentlyRouter = router({
       }
     }),
 
-  // ── Stateless coach (no pair required) ───────────────────────────────────
+  // Stateless coach (no pair required)
   coachSolo: publicProcedure
     .input(z.object({
       message: z.string().min(1).max(2000),
       provider: z.enum(['groq', 'claude', 'venice']).default('groq'),
     }))
     .mutation(async ({ input, ctx }) => {
-      const systemPrompt = \`You are Bently — a relational communication mediator.
+      const systemPrompt = `You are Bently — a relational communication mediator.
 The person speaking to you does not yet have a partner on this platform.
 Help them think through what they're experiencing as if you're a sharp, caring sounding board.
-Speak directly. Don't over-soften. Keep it under 150 words.\`;
+Speak directly. Don't over-soften. Keep it under 150 words.`;
 
       try {
         const aiResponse = await aiProviders[input.provider].complete({
@@ -200,7 +198,7 @@ Speak directly. Don't over-soften. Keep it under 150 words.\`;
       }
     }),
 
-  // ── Placeholder stubs ──────────────────────────────────────────────────
+  // Placeholder stubs
   list: publicProcedure.query(() => ({ resource: 'bently', items: [] as unknown[] })),
   getById: publicProcedure
     .input(z.object({ id: z.string().min(1) }))
