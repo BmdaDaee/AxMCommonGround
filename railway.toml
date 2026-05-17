@@ -1,6 +1,6 @@
 [build]
   builder = "NIXPACKS"
-  buildCommand = "pnpm --filter @axmcommonground/server install --no-frozen-lockfile && pnpm --filter @axmcommonground/server build"
+  buildCommand = "pnpm install --no-frozen-lockfile && pnpm --filter @axmcommonground/server build"
 
 [deploy]
   startCommand = "node packages/server/dist/src/index.js"
