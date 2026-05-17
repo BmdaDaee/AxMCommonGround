@@ -10,7 +10,7 @@ export interface AiCompletionRequest {
 }
 
 export interface AiCompletionResponse {
-  provider: 'claude' | 'venice' | 'mock';
+  provider: 'groq' | 'claude' | 'venice' | 'mock';
   model: string;
   content: string;
 }
