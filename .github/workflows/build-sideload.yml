@@ -165,36 +165,25 @@ jobs:
             echo "No Podfile found"
           fi
       
-      - name: Disable code signing requirement
-        working-directory: packages/mobile/ios
-        run: |
-          # Set dummy signing identity for sideload builds (no Apple Developer account needed)
-          # This allows xcodebuild to work in CI without requiring a development team
-          xcodebuild -workspace CommonGround.xcworkspace \
-            -scheme CommonGround \
-            -configuration Release \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            -derivedDataPath build \
-            build-for-testing 2>&1 | tail -20 || echo "Pre-build check completed"
-      
       - name: Build iOS Archive (unsigned)
         working-directory: packages/mobile/ios
         run: |
-          xcodebuild -workspace CommonGround.xcworkspace \
+          xcodebuild \
+            -workspace CommonGround.xcworkspace \
             -scheme CommonGround \
             -configuration Release \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
             -derivedDataPath build \
             -archivePath build/CommonGround.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
             archive 2>&1 | tail -50 || true
       
       - name: Export IPA (ad-hoc)
         working-directory: packages/mobile/ios
         run: |
           if [ -d "build/CommonGround.xcarchive" ]; then
-            xcodebuild -exportArchive \
+            xcodebuild \
+              -exportArchive \
               -archivePath build/CommonGround.xcarchive \
               -exportPath build/ipa \
               -exportOptionsPlist ../ExportOptions.plist \
@@ -243,7 +232,6 @@ jobs:
         run: |
           mkdir -p release
           
-          # Check for APK
           if [ -f "artifacts/android-apk/app-release.apk" ]; then
             cp artifacts/android-apk/app-release.apk release/CommonGround.apk
             echo "✅ APK included"
@@ -251,7 +239,6 @@ jobs:
             echo "⚠️  No APK available"
           fi
           
-          # Check for IPA
           if [ -f "artifacts/ios-ipa/CommonGround.ipa" ]; then
             cp artifacts/ios-ipa/CommonGround.ipa release/CommonGround.ipa
             echo "✅ IPA included"
@@ -259,7 +246,6 @@ jobs:
             echo "⚠️  No IPA available"
           fi
           
-          # List what we're releasing
           echo ""
           echo "Release contents:"
           ls -lh release/ || echo "Release directory empty"
