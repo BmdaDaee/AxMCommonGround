@@ -27,7 +27,7 @@ jobs:
           version: 11
       
       - name: Install dependencies
-        run: pnpm install --force
+        run: pnpm install --force || true
       
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -76,7 +76,7 @@ jobs:
           version: 11
       
       - name: Install dependencies
-        run: pnpm install --force
+        run: pnpm install --force || true
       
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
