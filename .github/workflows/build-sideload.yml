@@ -29,10 +29,16 @@ jobs:
         with:
           version: 11
       
-      - name: Restore pnpm cache
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+      
+      - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
-          path: ~/.pnpm-store
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-
@@ -61,25 +67,27 @@ jobs:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           EAS_BUILD: 'true'
       
-      - name: Debug - List gradle files
-        run: ls -la packages/mobile/android/ | grep -E "gradle|build"
-      
       - name: Build Android APK
         working-directory: packages/mobile/android
         run: |
           chmod +x gradlew
-          ./gradlew assembleRelease --stacktrace --info 2>&1 | tail -100
+          ./gradlew assembleRelease --stacktrace --info 2>&1 | tail -50
       
-      - name: Debug - List APK output
-        run: find packages/mobile/android -name "*.apk" -type f 2>/dev/null || echo "No APK found yet"
+      - name: Check APK exists
+        run: |
+          if [ -f "packages/mobile/android/app/build/outputs/apk/release/app-release.apk" ]; then
+            echo "APK found"
+            ls -lh packages/mobile/android/app/build/outputs/apk/release/app-release.apk
+          else
+            echo "APK not found at expected path"
+            find packages/mobile/android -name "*.apk" -type f || true
+          fi
       
-      - name: Upload APK
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: packages/mobile/android/app/build/outputs/apk/release/app-release.apk
-          if-no-files-found: warn
-          retention-days: 30
 
   build-ios:
     runs-on: macos-13
@@ -98,10 +106,16 @@ jobs:
         with:
           version: 11
       
-      - name: Restore pnpm cache
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+      
+      - name: Setup pnpm cache
         uses: actions/cache@v4
         with:
-          path: ~/.pnpm-store
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-
@@ -120,14 +134,14 @@ jobs:
         env:
           EAS_BUILD: 'true'
       
-      - name: Debug - List Xcode workspaces
-        run: find packages/mobile/ios -name "*.xcworkspace" -type d
-      
-      - name: Install CocoaPods
+      - name: Check CocoaPods
         working-directory: packages/mobile/ios
         run: |
           if [ -f "Podfile" ]; then
+            echo "Running pod install..."
             pod install --repo-update
+          else
+            echo "No Podfile found, skipping pod install"
           fi
       
       - name: Build iOS Archive
@@ -138,7 +152,6 @@ jobs:
             -configuration Release \
             -derivedDataPath build \
             -archivePath build/CommonGround.xcarchive \
-            -verbose \
             archive
       
       - name: Export IPA
@@ -147,19 +160,23 @@ jobs:
           xcodebuild -exportArchive \
             -archivePath build/CommonGround.xcarchive \
             -exportPath build/ipa \
-            -exportOptionsPlist ../ExportOptions.plist \
-            -verbose
+            -exportOptionsPlist ../ExportOptions.plist
       
-      - name: Debug - List IPA output
-        run: find packages/mobile/ios/build/ipa -name "*.ipa" -type f 2>/dev/null || echo "No IPA found"
+      - name: Check IPA exists
+        run: |
+          if [ -f "packages/mobile/ios/build/ipa/CommonGround.ipa" ]; then
+            echo "IPA found"
+            ls -lh packages/mobile/ios/build/ipa/CommonGround.ipa
+          else
+            echo "IPA not found at expected path"
+            find packages/mobile/ios/build -name "*.ipa" -type f || true
+          fi
       
-      - name: Upload IPA
+      - name: Upload IPA artifact
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
           path: packages/mobile/ios/build/ipa/CommonGround.ipa
-          if-no-files-found: warn
-          retention-days: 30
 
   create-release:
     needs: [build-android, build-ios]
@@ -170,31 +187,36 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Download artifacts
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: ./artifacts
+          path: ./download-artifacts
       
-      - name: Debug - List downloaded files
-        run: find ./artifacts -type f
-      
-      - name: Rename artifacts for release
+      - name: Prepare release files
         run: |
           mkdir -p release
-          cp artifacts/android-apk/app-release.apk release/CommonGround.apk || true
-          cp artifacts/ios-ipa/CommonGround.ipa release/CommonGround.ipa || true
+          if [ -f "download-artifacts/android-apk/app-release.apk" ]; then
+            cp download-artifacts/android-apk/app-release.apk release/CommonGround.apk
+            echo "APK ready"
+          fi
+          if [ -f "download-artifacts/ios-ipa/CommonGround.ipa" ]; then
+            cp download-artifacts/ios-ipa/CommonGround.ipa release/CommonGround.ipa
+            echo "IPA ready"
+          fi
           ls -la release/
       
-      - name: Create GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: sideload-${{ github.run_number }}
           name: Sideload Build ${{ github.run_number }}
           body: |
-            # CommonGround Sideload Build
+            # CommonGround Sideload Build ${{ github.run_number }}
             
-            Download the APK and IPA files below for sideloading:
-            - **Android APK**: Use with Sideloadly or ADB
+            Automated build of iOS IPA and Android APK for sideloading.
+            
+            **Downloads:**
+            - **Android APK**: Use with Sideloadly, ADB, or F-Droid
             - **iOS IPA**: Use with AltStore, Sideloadly, or Xcode
           files: |
             release/CommonGround.apk
