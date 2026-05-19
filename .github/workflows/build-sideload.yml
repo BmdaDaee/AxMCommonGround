@@ -38,24 +38,29 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 35
-          build-tools: '35.0.0'
-          ndk: '27.1.12297006'
+          api-level: 34
+          build-tools: '34.0.0'
+          ndk: '26.3.11579264'
       
-      - name: Build Android APK
+      - name: Prebuild Android
         working-directory: packages/mobile
-        run: |
-          npx expo prebuild --clean
-          cd android
-          ./gradlew assembleRelease
+        run: npx expo prebuild --clean --platform android
         env:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+      
+      - name: Build Android APK
+        working-directory: packages/mobile/android
+        run: |
+          ./gradlew assembleRelease -PPKG_VERSION_CODE=1 --warning-mode=all
+      
+      - name: List APK output
+        run: find packages/mobile/android/app/build/outputs -name "*.apk" -type f
       
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: packages/mobile/android/app/build/outputs/apk/release/
+          path: packages/mobile/android/app/build/outputs/apk/release/app-release.apk
           retention-days: 30
 
   build-ios:
@@ -72,8 +77,7 @@ jobs:
       
       - name: Setup pnpm
         uses: pnpm/action-setup@v2
-        with:
-          version: 11
+        with:\n          version: 11
       
       - name: Install dependencies
         run: pnpm install --force || true
@@ -83,27 +87,36 @@ jobs:
         with:
           xcode-version: latest-stable
       
-      - name: Build iOS IPA
+      - name: Prebuild iOS
         working-directory: packages/mobile
+        run: npx expo prebuild --clean --platform ios
+      
+      - name: Build iOS Archive
+        working-directory: packages/mobile/ios
         run: |
-          npx expo prebuild --clean --platform ios
-          cd ios
           xcodebuild -workspace CommonGround.xcworkspace \
             -scheme CommonGround \
             -configuration Release \
             -derivedDataPath build \
             -archivePath build/CommonGround.xcarchive \
             archive
+      
+      - name: Export IPA
+        working-directory: packages/mobile/ios
+        run: |
           xcodebuild -exportArchive \
             -archivePath build/CommonGround.xcarchive \
             -exportPath build/ipa \
-            -exportOptionsPlist ExportOptions.plist
+            -exportOptionsPlist ../ExportOptions.plist
+      
+      - name: List IPA output
+        run: find packages/mobile/ios/build/ipa -name "*.ipa" -type f
       
       - name: Upload IPA
         uses: actions/upload-artifact@v4
         with:
           name: ios-ipa
-          path: packages/mobile/ios/build/ipa/
+          path: packages/mobile/ios/build/ipa/CommonGround.ipa
           retention-days: 30
 
   create-release:
@@ -146,7 +159,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./artifacts/android/release/app-release.apk
+          asset_path: ./artifacts/android/app-release.apk
           asset_name: CommonGround.apk
           asset_content_type: application/vnd.android.package-archive
       
