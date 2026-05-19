@@ -5,6 +5,9 @@ import { users, xpEvents } from '../db/schema.js';
 import { eq } from 'drizzle-orm';
 import { RANK_XP_REQUIREMENTS } from '../../../shared/constants.js';
 
+const SORTED_RANKS_DESC = Object.entries(RANK_XP_REQUIREMENTS).sort((a, b) => (b[1] as number) - (a[1] as number));
+const SORTED_RANKS_ASC = Object.entries(RANK_XP_REQUIREMENTS).sort((a, b) => (a[1] as number) - (b[1] as number));
+
 export const xpRouter = router({
   addXP: publicProcedure
     .input(z.object({
@@ -30,8 +33,7 @@ export const xpRouter = router({
       
       // Determine new rank
       let newRank = user.rank;
-      const ranks = Object.entries(RANK_XP_REQUIREMENTS).sort((a, b) => (b[1] as number) - (a[1] as number));
-      for (const [rank, req] of ranks) {
+      for (const [rank, req] of SORTED_RANKS_DESC) {
         if (newXP >= (req as number)) {
           newRank = rank;
           break;
@@ -66,14 +68,13 @@ export const xpRouter = router({
       throw new TRPCError({ code: 'NOT_FOUND', message: 'User not found' });
     }
 
-    const ranks = Object.entries(RANK_XP_REQUIREMENTS).sort((a, b) => (a[1] as number) - (b[1] as number));
     let nextRank = null;
     let xpToNextRank = 0;
 
-    for (let i = 0; i < ranks.length; i++) {
-      if (user.xp < (ranks[i][1] as number)) {
-        nextRank = ranks[i][0];
-        xpToNextRank = (ranks[i][1] as number) - user.xp;
+    for (let i = 0; i < SORTED_RANKS_ASC.length; i++) {
+      if (user.xp < (SORTED_RANKS_ASC[i][1] as number)) {
+        nextRank = SORTED_RANKS_ASC[i][0];
+        xpToNextRank = (SORTED_RANKS_ASC[i][1] as number) - user.xp;
         break;
       }
     }
