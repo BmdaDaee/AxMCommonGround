@@ -1,0 +1,75 @@
+name: Build Android APK
+
+on:
+  workflow_dispatch:
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: '11.x'
+
+      - name: Restore pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts || pnpm install --ignore-scripts
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: '34'
+          ndk-version: '26.3.11579264'
+
+      - name: Build Android APK
+        working-directory: packages/mobile
+        run: |
+          export NODE_OPTIONS=--max-old-space-size=4096
+          export GRADLE_OPTS=-Xmx4g
+          eas build --platform android --local --output app-release.apk 2>&1 | tail -100 || true
+
+      - name: Create artifact staging
+        run: mkdir -p artifact-staging
+
+      - name: Stage APK
+        run: |
+          if [ -f "packages/mobile/app-release.apk" ]; then
+            cp packages/mobile/app-release.apk artifact-staging/
+            echo "✓ APK staged" > artifact-staging/BUILD_NOTE.txt
+          else
+            echo "✗ APK build failed" > artifact-staging/BUILD_NOTE.txt
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-build
+          path: artifact-staging/
+          if-no-files-found: ignore
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: android-${{ github.run_number }}
+          files: artifact-staging/app-release.apk
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

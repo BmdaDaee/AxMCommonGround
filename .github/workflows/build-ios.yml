@@ -1,0 +1,105 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-13
+    timeout-minutes: 35
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: '11.x'
+
+      - name: Restore pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts || pnpm install --ignore-scripts
+
+      - name: Prebuild iOS
+        run: |
+          cd packages/mobile
+          npx expo prebuild --clean --platform ios 2>&1 || echo "Prebuild warning, continuing..."
+        env:
+          EAS_BUILD: 'true'
+
+      - name: Install CocoaPods
+        working-directory: packages/mobile/ios
+        run: |
+          if [ -f "Podfile" ]; then
+            pod install --repo-update 2>&1 || echo "Pod install warning"
+          else
+            echo "No Podfile found"
+          fi
+
+      - name: Build iOS Archive (unsigned)
+        working-directory: packages/mobile/ios
+        run: |
+          xcodebuild \
+            -workspace CommonGround.xcworkspace \
+            -scheme CommonGround \
+            -configuration Release \
+            -derivedDataPath build \
+            -archivePath build/CommonGround.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            archive 2>&1 | tail -50 || true
+
+      - name: Export iOS Archive to IPA
+        working-directory: packages/mobile/ios
+        run: |
+          if [ -d "build/CommonGround.xcarchive" ]; then
+            xcodebuild \
+              -exportArchive \
+              -archivePath build/CommonGround.xcarchive \
+              -exportOptionsPlist ../ExportOptions.plist \
+              -exportPath build/export \
+              2>&1 | tail -50 || true
+          else
+            echo "Archive not found, skipping export"
+          fi
+
+      - name: Create artifact staging
+        run: mkdir -p artifact-staging
+
+      - name: Stage IPA
+        run: |
+          if [ -f "packages/mobile/ios/build/export/CommonGround.ipa" ]; then
+            cp packages/mobile/ios/build/export/CommonGround.ipa artifact-staging/
+            echo "✓ IPA staged" > artifact-staging/BUILD_NOTE.txt
+          else
+            echo "✗ IPA build failed" > artifact-staging/BUILD_NOTE.txt
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-build
+          path: artifact-staging/
+          if-no-files-found: ignore
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ios-${{ github.run_number }}
+          files: artifact-staging/CommonGround.ipa
+          fail_on_unmatched_files: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
