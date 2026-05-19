@@ -40,6 +40,9 @@
         "buildType": "app-bundle",
         "gradle": {
           "gradleVersion": "8.2.1"
+        },
+        "env": {
+          "FORCE_CLEAN": "true"
         }
       },
       "ios": {
