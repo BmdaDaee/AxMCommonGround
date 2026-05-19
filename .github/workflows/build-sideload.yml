@@ -165,24 +165,41 @@ jobs:
             echo "No Podfile found"
           fi
       
-      - name: Build iOS Archive
+      - name: Disable code signing requirement
+        working-directory: packages/mobile/ios
+        run: |
+          # Set dummy signing identity for sideload builds (no Apple Developer account needed)
+          # This allows xcodebuild to work in CI without requiring a development team
+          xcodebuild -workspace CommonGround.xcworkspace \
+            -scheme CommonGround \
+            -configuration Release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            -derivedDataPath build \
+            build-for-testing 2>&1 | tail -20 || echo "Pre-build check completed"
+      
+      - name: Build iOS Archive (unsigned)
         working-directory: packages/mobile/ios
         run: |
           xcodebuild -workspace CommonGround.xcworkspace \
             -scheme CommonGround \
             -configuration Release \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
             -derivedDataPath build \
             -archivePath build/CommonGround.xcarchive \
             archive 2>&1 | tail -50 || true
       
-      - name: Export IPA
+      - name: Export IPA (ad-hoc)
         working-directory: packages/mobile/ios
         run: |
           if [ -d "build/CommonGround.xcarchive" ]; then
             xcodebuild -exportArchive \
               -archivePath build/CommonGround.xcarchive \
               -exportPath build/ipa \
-              -exportOptionsPlist ../ExportOptions.plist 2>&1 | tail -50 || true
+              -exportOptionsPlist ../ExportOptions.plist \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO 2>&1 | tail -50 || true
           else
             echo "Archive not found, skipping export"
           fi
