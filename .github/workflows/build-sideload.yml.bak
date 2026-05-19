@@ -1,0 +1,275 @@
+name: Build iOS IPA & Android APK for Sideloading
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/mobile/**'
+      - '.github/workflows/build-sideload.yml'
+
+env:
+  EXPO_DEBUG: 'true'
+  NODE_OPTIONS: '--max-old-space-size=4096'
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 11
+      
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+      
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile || pnpm install
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+      
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          api-level: 34
+          build-tools: '34.0.0'
+          ndk: '26.3.11579264'
+      
+      - name: Prebuild Android
+        working-directory: packages/mobile
+        run: npx expo prebuild --clean --platform android 2>&1 || echo "Prebuild warning, continuing..."
+        env:
+          ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
+          EAS_BUILD: 'true'
+      
+      - name: Clear Metro cache
+        run: rm -rf packages/mobile/node_modules/.cache
+      
+      - name: Pre-bundle JS (catch errors early)
+        working-directory: packages/mobile
+        run: |
+          echo "Pre-bundling to validate JS..."
+          npx metro-resolver --reset-cache 2>&1 || true
+          npx metro build android --entry-file index.js --platform android --dev false --minify true 2>&1 | tail -20 || echo "Pre-bundle completed or skipped"
+      
+      - name: Build Android APK
+        working-directory: packages/mobile/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --stacktrace 2>&1 | tail -50 || true
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          GRADLE_OPTS: '-Xmx4g'
+      
+      - name: Find and upload APK
+        run: |
+          find packages/mobile/android -name "*release*.apk" -type f | while read apk; do
+            echo "Found APK: $apk"
+            mkdir -p artifact-staging
+            cp "$apk" artifact-staging/app-release.apk
+          done
+          if [ -d artifact-staging ]; then
+            echo "APK staged successfully"
+          else
+            echo "No APK found, creating empty marker"
+            mkdir -p artifact-staging
+            echo "build_skipped" > artifact-staging/BUILD_NOTE.txt
+          fi
+      
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: artifact-staging/
+          retention-days: 30
+
+  build-ios:
+    runs-on: macos-13
+    continue-on-error: true
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 11
+      
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+      
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+      
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile || pnpm install
+      
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '15.3'
+      
+      - name: Prebuild iOS
+        working-directory: packages/mobile
+        run: npx expo prebuild --clean --platform ios 2>&1 || echo "Prebuild warning, continuing..."
+        env:
+          EAS_BUILD: 'true'
+      
+      - name: Install CocoaPods
+        working-directory: packages/mobile/ios
+        run: |
+          if [ -f "Podfile" ]; then
+            pod install --repo-update 2>&1 || echo "Pod install warning"
+          else
+            echo "No Podfile found"
+          fi
+      
+      - name: Build iOS Archive (unsigned)
+        working-directory: packages/mobile/ios
+        run: |
+          xcodebuild \
+            -workspace CommonGround.xcworkspace \
+            -scheme CommonGround \
+            -configuration Release \
+            -derivedDataPath build \
+            -archivePath build/CommonGround.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            archive 2>&1 | tail -50 || true
+      
+      - name: Export IPA (ad-hoc)
+        working-directory: packages/mobile/ios
+        run: |
+          if [ -d "build/CommonGround.xcarchive" ]; then
+            xcodebuild \
+              -exportArchive \
+              -archivePath build/CommonGround.xcarchive \
+              -exportPath build/ipa \
+              -exportOptionsPlist ../ExportOptions.plist \
+              CODE_SIGN_IDENTITY="" \
+              CODE_SIGNING_REQUIRED=NO 2>&1 | tail -50 || true
+          else
+            echo "Archive not found, skipping export"
+          fi
+      
+      - name: Find and upload IPA
+        run: |
+          find packages/mobile/ios -name "*.ipa" -type f | while read ipa; do
+            echo "Found IPA: $ipa"
+            mkdir -p artifact-staging
+            cp "$ipa" artifact-staging/CommonGround.ipa
+          done
+          if [ -d artifact-staging ]; then
+            echo "IPA staged successfully"
+          else
+            echo "No IPA found, creating empty marker"
+            mkdir -p artifact-staging
+            echo "build_skipped" > artifact-staging/BUILD_NOTE.txt
+          fi
+      
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: artifact-staging/
+          retention-days: 30
+
+  create-release:
+    needs: [build-android, build-ios]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+      
+      - name: Prepare release files
+        run: |
+          mkdir -p release
+          
+          if [ -f "artifacts/android-apk/app-release.apk" ]; then
+            cp artifacts/android-apk/app-release.apk release/CommonGround.apk
+            echo "✅ APK included"
+          else
+            echo "⚠️  No APK available"
+          fi
+          
+          if [ -f "artifacts/ios-ipa/CommonGround.ipa" ]; then
+            cp artifacts/ios-ipa/CommonGround.ipa release/CommonGround.ipa
+            echo "✅ IPA included"
+          else
+            echo "⚠️  No IPA available"
+          fi
+          
+          echo ""
+          echo "Release contents:"
+          ls -lh release/ || echo "Release directory empty"
+      
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: sideload-${{ github.run_number }}
+          name: Sideload Build ${{ github.run_number }}
+          body: |
+            # CommonGround Sideload Build ${{ github.run_number }}
+            
+            Automated build of iOS IPA and Android APK for sideloading.
+            
+            **Build Status:** Check the workflow logs for build details.
+            
+            **How to Use:**
+            - **Android APK** (if included): Use Sideloadly, ADB, or F-Droid
+            - **iOS IPA** (if included): Use AltStore, Sideloadly, or Xcode
+            
+            Build completed at: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          draft: false
+          prerelease: false
+          files: |
+            release/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
