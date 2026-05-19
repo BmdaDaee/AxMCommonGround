@@ -36,7 +36,11 @@
     "production": {
       "autoIncrement": true,
       "android": {
-        "buildType": "app-bundle"
+        "image": "default",
+        "buildType": "app-bundle",
+        "gradle": {
+          "gradleVersion": "8.2.1"
+        }
       },
       "ios": {
         "simulator": false
