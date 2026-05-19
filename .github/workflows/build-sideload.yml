@@ -92,13 +92,18 @@ jobs:
           xcodebuild -workspace CommonGround.xcworkspace \
             -scheme CommonGround \
             -configuration Release \
+            -sdk iphoneos \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
             -derivedDataPath build \
             -archivePath build/CommonGround.xcarchive \
             archive
-          xcodebuild -exportArchive \
-            -archivePath build/CommonGround.xcarchive \
-            -exportPath build/ipa \
-            -exportOptionsPlist ../ExportOptions.plist
+          mkdir -p build/ipa/Payload
+          cp -R build/CommonGround.xcarchive/Products/Applications/CommonGround.app build/ipa/Payload/
+          cd build/ipa
+          zip -r CommonGround.ipa Payload
+          rm -rf Payload
       
       - name: Upload IPA
         uses: actions/upload-artifact@v4
