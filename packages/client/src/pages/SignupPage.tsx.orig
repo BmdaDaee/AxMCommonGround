@@ -14,7 +14,7 @@ export const SignupPage: React.FC = () => {
 
   const signupMutation = trpc.auth.signup.useMutation({
     onSuccess: (data) => {
-      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('token', data.token);
       navigate('/dashboard');
     },
     onError: (error) => {
