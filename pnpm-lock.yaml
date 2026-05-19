@@ -178,9 +178,6 @@ importers:
       react-native-svg:
         specifier: 15.12.1
         version: 15.12.1(react-native@0.81.5(@babel/core@7.29.0)(@react-native/metro-config@0.85.3(@babel/core@7.29.0))(@types/react@18.2.79)(react@18.2.0))(react@18.2.0)
-      superjson:
-        specifier: ^2.2.6
-        version: 2.2.6
       zod:
         specifier: ^3.25.76
         version: 3.25.76

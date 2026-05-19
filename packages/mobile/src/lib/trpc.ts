@@ -1,6 +1,5 @@
 import { httpBatchLink } from '@trpc/client';
 import { createTRPCReact } from '@trpc/react-query';
-import superjson from 'superjson';
 import * as SecureStore from 'expo-secure-store';
 import type { AppRouter } from '../../../server/src/routers';
 
@@ -12,7 +11,6 @@ export async function createTRPCClient() {
   const token = await SecureStore.getItemAsync('authToken');
 
   return trpc.createClient({
-    transformer: superjson,
     links: [
       httpBatchLink({
         url: `${API_URL}/trpc`,
