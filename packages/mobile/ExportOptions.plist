@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>stripSwiftSymbols</key>
+	<true/>
+	<key>teamID</key>
+	<string></string>
+	<key>thinning</key>
+	<string>&lt;none&gt;</string>
+	<key>method</key>
+	<string>ad-hoc</string>
+	<key>bundleIdentifier</key>
+	<string>com.axm.commonground</string>
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+	<key>provisioningProfiles</key>
+	<dict>
+		<key>com.axm.commonground</key>
+		<string>iOS Team Provisioning Profile</string>
+	</dict>
+</dict>
+</plist>
