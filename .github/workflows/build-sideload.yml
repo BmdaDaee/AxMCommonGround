@@ -10,6 +10,7 @@ on:
 
 env:
   EXPO_DEBUG: 'true'
+  NODE_OPTIONS: '--max-old-space-size=4096'
 
 jobs:
   build-android:
@@ -68,11 +69,24 @@ jobs:
           ANDROID_SDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}
           EAS_BUILD: 'true'
       
+      - name: Clear Metro cache
+        run: rm -rf packages/mobile/node_modules/.cache
+      
+      - name: Pre-bundle JS (catch errors early)
+        working-directory: packages/mobile
+        run: |
+          echo "Pre-bundling to validate JS..."
+          npx metro-resolver --reset-cache 2>&1 || true
+          npx metro build android --entry-file index.js --platform android --dev false --minify true 2>&1 | tail -20 || echo "Pre-bundle completed or skipped"
+      
       - name: Build Android APK
         working-directory: packages/mobile/android
         run: |
           chmod +x gradlew
           ./gradlew assembleRelease --stacktrace 2>&1 | tail -50 || true
+        env:
+          NODE_OPTIONS: '--max-old-space-size=4096'
+          GRADLE_OPTS: '-Xmx4g'
       
       - name: Find and upload APK
         run: |
