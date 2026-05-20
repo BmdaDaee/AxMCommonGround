@@ -26,7 +26,7 @@ const STATE_COPY: Record<string, { label: string; line: string; color: string }>
   },
   MISALIGNED: {
     label: 'Misaligned',
-    line: 'You\'re reading from different pages. Not broken — just out of step.',
+    line: "You're reading from different pages. Not broken — just out of step.",
     color: '#FB923C',
   },
   CAPACITY_BLOCKED: {
@@ -36,7 +36,7 @@ const STATE_COPY: Record<string, { label: string; line: string; color: string }>
   },
   TRUST_FRACTURED: {
     label: 'Trust Fractured',
-    line: 'Something needs care. Bently is here when you\'re ready.',
+    line: "Something needs care. Bently is here when you're ready.",
     color: '#A78BFA',
   },
 };
@@ -86,8 +86,9 @@ export default function DashboardScreen() {
 
   const pair = pairQuery.data;
   const hasPair = !!pair;
-  const isPaired = hasPair && pair.status === 'active';
-  const isPending = hasPair && pair.status === 'pending';
+  // Schema uses uppercase: ACTIVE, PENDING, DISSOLVED
+  const isPaired = hasPair && pair.status === 'ACTIVE';
+  const isPending = hasPair && pair.status === 'PENDING';
 
   return (
     <ScrollView
@@ -101,7 +102,6 @@ export default function DashboardScreen() {
         />
       }
     >
-      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.brandSmall}>AxM</Text>
@@ -118,24 +118,20 @@ export default function DashboardScreen() {
           <View style={styles.eyebrowSection}>
             <Text style={styles.eyebrow}>NOT YET ACTIVE</Text>
           </View>
-
           <Text style={styles.headline}>The space is waiting.</Text>
           <View style={styles.divider} />
-
           <Text style={styles.bodyText}>
             CommonGround doesn't start until two people are here. Until then,
             Bently won't speak and the relational engine stays dormant.
             {'\n\n'}
             That's by design.
           </Text>
-
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => navigateWithHaptic('/(onboarding)/invite')}
           >
             <Text style={styles.primaryButtonText}>Invite your partner</Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={styles.secondaryButton}
             onPress={() => navigateWithHaptic('/(onboarding)/join')}
@@ -145,16 +141,14 @@ export default function DashboardScreen() {
         </>
       )}
 
-      {/* CASE 2: Pair pending — partner hasn't joined */}
+      {/* CASE 2: Pair pending */}
       {isPending && (
         <>
           <View style={styles.eyebrowSection}>
             <Text style={styles.eyebrow}>WAITING</Text>
           </View>
-
           <Text style={styles.headline}>Holding the door.</Text>
           <View style={styles.divider} />
-
           <Text style={styles.bodyText}>
             Your invite is out there. The moment your partner joins,
             this space comes alive — Bently steps in, the engine starts reading,
@@ -162,7 +156,6 @@ export default function DashboardScreen() {
             {'\n\n'}
             No pressure on them. No countdown.
           </Text>
-
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={() => navigateWithHaptic('/(onboarding)/invite')}
@@ -178,7 +171,6 @@ export default function DashboardScreen() {
           <View style={styles.eyebrowSection}>
             <Text style={styles.eyebrow}>CURRENT STATE</Text>
           </View>
-
           <Text style={styles.headline}>
             {STATE_COPY[pair.relationalState]?.label ?? 'Reading…'}
           </Text>
@@ -188,12 +180,10 @@ export default function DashboardScreen() {
               { backgroundColor: STATE_COPY[pair.relationalState]?.color ?? '#D4AF37' },
             ]}
           />
-
           <Text style={styles.bodyText}>
             {STATE_COPY[pair.relationalState]?.line ??
               'Bently is reading the space.'}
           </Text>
-
           <View style={styles.actionGroup}>
             <TouchableOpacity
               style={styles.actionCard}
@@ -203,7 +193,6 @@ export default function DashboardScreen() {
               <Text style={styles.actionTitle}>Sit with the third presence</Text>
               <Text style={styles.actionHint}>Talk one-to-one →</Text>
             </TouchableOpacity>
-
             <TouchableOpacity
               style={styles.actionCard}
               onPress={() => navigateWithHaptic('/(app)/messages')}
@@ -220,144 +209,41 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#080808',
-  },
-  scrollContent: {
-    paddingHorizontal: 32,
-    paddingTop: 64,
-    paddingBottom: 48,
-  },
+  container: { flex: 1, backgroundColor: '#080808' },
+  scrollContent: { paddingHorizontal: 32, paddingTop: 64, paddingBottom: 48 },
   centerContainer: {
-    flex: 1,
-    backgroundColor: '#080808',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    gap: 16,
+    flex: 1, backgroundColor: '#080808',
+    justifyContent: 'center', alignItems: 'center',
+    paddingHorizontal: 32, gap: 16,
   },
-  loadingText: {
-    color: '#888',
-    fontSize: 14,
-    fontStyle: 'italic',
-    fontWeight: '300',
-  },
-  errorTitle: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '300',
-    textAlign: 'center',
-  },
-  errorBody: {
-    color: '#888',
-    fontSize: 14,
-    lineHeight: 22,
-    textAlign: 'center',
-    marginBottom: 16,
-    fontWeight: '300',
-  },
+  loadingText: { color: '#888', fontSize: 14, fontStyle: 'italic', fontWeight: '300' },
+  errorTitle: { color: '#fff', fontSize: 20, fontWeight: '300', textAlign: 'center' },
+  errorBody: { color: '#888', fontSize: 14, lineHeight: 22, textAlign: 'center', marginBottom: 16, fontWeight: '300' },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 48,
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'flex-end', marginBottom: 48,
   },
-  brandSmall: {
-    color: '#666',
-    fontSize: 10,
-    letterSpacing: 3,
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  brand: {
-    color: '#D4AF37',
-    fontSize: 22,
-    fontWeight: '300',
-    letterSpacing: -0.3,
-  },
-  logoutLink: {
-    color: '#666',
-    fontSize: 13,
-    letterSpacing: 0.5,
-  },
-  eyebrowSection: {
-    marginBottom: 12,
-  },
-  eyebrow: {
-    color: '#666',
-    fontSize: 11,
-    letterSpacing: 3,
-    fontWeight: '600',
-  },
-  headline: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '300',
-    letterSpacing: -0.5,
-    marginBottom: 16,
-  },
-  divider: {
-    width: 40,
-    height: 1,
-    backgroundColor: '#D4AF37',
-    marginBottom: 20,
-  },
-  bodyText: {
-    color: '#aaa',
-    fontSize: 15,
-    lineHeight: 24,
-    fontWeight: '300',
-    marginBottom: 32,
-  },
+  brandSmall: { color: '#666', fontSize: 10, letterSpacing: 3, fontWeight: '600', marginBottom: 4 },
+  brand: { color: '#D4AF37', fontSize: 22, fontWeight: '300', letterSpacing: -0.3 },
+  logoutLink: { color: '#666', fontSize: 13, letterSpacing: 0.5 },
+  eyebrowSection: { marginBottom: 12 },
+  eyebrow: { color: '#666', fontSize: 11, letterSpacing: 3, fontWeight: '600' },
+  headline: { color: '#fff', fontSize: 28, fontWeight: '300', letterSpacing: -0.5, marginBottom: 16 },
+  divider: { width: 40, height: 1, backgroundColor: '#D4AF37', marginBottom: 20 },
+  bodyText: { color: '#aaa', fontSize: 15, lineHeight: 24, fontWeight: '300', marginBottom: 32 },
   primaryButton: {
-    backgroundColor: '#D4AF37',
-    paddingVertical: 16,
-    borderRadius: 4,
-    alignItems: 'center',
-    marginBottom: 12,
+    backgroundColor: '#D4AF37', paddingVertical: 16,
+    borderRadius: 4, alignItems: 'center', marginBottom: 12,
   },
-  primaryButtonText: {
-    color: '#080808',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  secondaryButton: {
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: '#888',
-    fontSize: 14,
-    letterSpacing: 0.3,
-  },
-  actionGroup: {
-    gap: 12,
-  },
+  primaryButtonText: { color: '#080808', fontSize: 16, fontWeight: '600', letterSpacing: 0.5 },
+  secondaryButton: { paddingVertical: 14, alignItems: 'center' },
+  secondaryButtonText: { color: '#888', fontSize: 14, letterSpacing: 0.3 },
+  actionGroup: { gap: 12 },
   actionCard: {
-    backgroundColor: '#111',
-    borderWidth: 1,
-    borderColor: '#222',
-    borderRadius: 8,
-    padding: 24,
+    backgroundColor: '#111', borderWidth: 1, borderColor: '#222',
+    borderRadius: 8, padding: 24,
   },
-  actionLabel: {
-    color: '#666',
-    fontSize: 10,
-    letterSpacing: 3,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  actionTitle: {
-    color: '#fff',
-    fontSize: 17,
-    fontWeight: '400',
-    marginBottom: 12,
-  },
-  actionHint: {
-    color: '#D4AF37',
-    fontSize: 13,
-    letterSpacing: 0.3,
-  },
+  actionLabel: { color: '#666', fontSize: 10, letterSpacing: 3, fontWeight: '600', marginBottom: 8 },
+  actionTitle: { color: '#fff', fontSize: 17, fontWeight: '400', marginBottom: 12 },
+  actionHint: { color: '#D4AF37', fontSize: 13, letterSpacing: 0.3 },
 });
