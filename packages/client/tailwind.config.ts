@@ -56,6 +56,7 @@ const config: Config = {
       fontFamily: {
         sans: THEME.typography.fontFamily.sans,
         mono: THEME.typography.fontFamily.mono,
+        serif: ['Playfair Display', 'serif'],
       },
       
       fontSize: {

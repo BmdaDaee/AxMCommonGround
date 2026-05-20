@@ -6,46 +6,40 @@ type RelationalState = 'ALIGNED' | 'DORMANT' | 'MISALIGNED' | 'CAPACITY_BLOCKED'
 
 const STATE_CONFIG: Record<RelationalState, {
   color: string;
-  border: string;
   label: string;
   description: string;
 }> = {
   ALIGNED: {
     color: '#10B981',
-    border: 'border-[#10B981]',
     label: 'Aligned',
     description: 'Both of you are showing up. The channel is open.',
   },
   DORMANT: {
     color: '#6B7280',
-    border: 'border-[#6B7280]',
     label: 'Dormant',
     description: 'Things are stable but low-energy. The comfort is real — so is the drift.',
   },
   MISALIGNED: {
     color: '#F59E0B',
-    border: 'border-[#F59E0B]',
     label: 'Misaligned',
     description: 'You have capacity. Your meanings are diverging. Not a crisis — a gap.',
   },
   CAPACITY_BLOCKED: {
     color: '#9D4EDD',
-    border: 'border-[#9D4EDD]',
     label: 'Capacity Blocked',
     description: 'One or both of you is near limit. Deeper work is not available right now.',
   },
   TRUST_FRACTURED: {
     color: '#E63946',
-    border: 'border-[#E63946]',
     label: 'Trust Fractured',
     description: 'Something broke. Repair requires action, not reassurance.',
   },
 };
 
 function metricLabel(value: number): { label: string; color: string } {
-  if (value >= 70) return { label: 'HIGH', color: '#10B981' };
-  if (value >= 40) return { label: 'MED', color: '#F59E0B' };
-  return { label: 'LOW', color: '#E63946' };
+  if (value >= 70) return { label: 'Strong', color: '#10B981' };
+  if (value >= 40) return { label: 'Moderate', color: '#F59E0B' };
+  return { label: 'Low', color: '#E63946' };
 }
 
 export const DashboardPage: React.FC = () => {
@@ -64,24 +58,23 @@ export const DashboardPage: React.FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="font-mono text-xs uppercase tracking-widest text-[#808080] animate-pulse">
-          Reading state...
-        </p>
+        <p className="text-sm text-[#999] animate-pulse">Reading your state...</p>
       </div>
     );
   }
 
   if (!pairQuery.data) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-6">
-        <p className="font-mono text-xs uppercase tracking-widest text-[#808080]">
-          No active pair
-        </p>
+      <div className="flex flex-col items-center justify-center h-96 gap-8">
+        <div className="text-center">
+          <h2 className="text-2xl mb-2">No active partnership</h2>
+          <p className="text-[#999] text-sm">Start a connection to begin.</p>
+        </div>
         <button
           onClick={() => navigate('/invite')}
-          className="bg-[#D4AF37] text-[#080808] px-8 py-3 font-mono text-xs uppercase tracking-widest hover:bg-[#E8C547] transition-colors"
+          className="btn-primary"
         >
-          Invite Partner
+          Invite a Partner
         </button>
       </div>
     );
@@ -100,52 +93,36 @@ export const DashboardPage: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-8">
-      {/* State hero */}
-      <div className={`border-l-4 ${config.border} pl-8 py-6`}>
-        <p className="font-mono text-xs uppercase tracking-widest text-[#808080] mb-3">
-          Relational State
-        </p>
-        <h1
-          className="font-mono text-6xl uppercase tracking-tighter mb-4"
-          style={{ color: config.color }}
-        >
+    <div className="space-y-12">
+      {/* State Hero */}
+      <div className="border-l-4 pl-8 py-4" style={{ borderColor: config.color }}>
+        <p className="label">Relational State</p>
+        <h1 className="mb-4" style={{ color: config.color }}>
           {config.label}
         </h1>
-        <p className="text-[#B0B0B0] text-sm leading-relaxed max-w-lg">
+        <p className="text-[#666] leading-relaxed max-w-2xl">
           {explanation}
         </p>
       </div>
 
-      {/* Dimension metrics */}
-      <div className="border border-[#1E1E1E] bg-[#0F0F0F]">
-        <div className="px-6 py-4 border-b border-[#1E1E1E]">
-          <p className="font-mono text-xs uppercase tracking-widest text-[#808080]">
-            Signal Dimensions
-          </p>
-        </div>
-        <div className="grid grid-cols-2 divide-x divide-y divide-[#1E1E1E]">
+      {/* Dimension Metrics */}
+      <div className="card">
+        <p className="label mb-6">Signal Dimensions</p>
+        <div className="grid grid-cols-2 gap-8">
           {dimensions.map(({ key, label }) => {
             const value = metrics[key] ?? 50;
             const { label: lvl, color } = metricLabel(value);
             return (
-              <div key={key} className="px-6 py-5">
-                <p className="font-mono text-xs uppercase tracking-widest text-[#808080] mb-2">
-                  {label}
-                </p>
-                <div className="flex items-end gap-3">
-                  <p
-                    className="font-mono text-2xl uppercase tracking-tighter"
-                    style={{ color }}
-                  >
+              <div key={key}>
+                <p className="label">{label}</p>
+                <div className="flex items-end gap-4 mb-4">
+                  <p className="text-3xl font-serif" style={{ color }}>
                     {lvl}
                   </p>
-                  <p className="font-mono text-xs text-[#808080] mb-1">
-                    {value}/100
-                  </p>
+                  <p className="text-sm text-[#999]">{value}/100</p>
                 </div>
-                {/* Bar */}
-                <div className="mt-3 h-0.5 bg-[#1E1E1E] w-full">
+                {/* Progress bar */}
+                <div className="h-1 bg-[#e8e6e3] rounded-full overflow-hidden">
                   <div
                     className="h-full transition-all duration-700"
                     style={{ width: `${value}%`, backgroundColor: color }}
@@ -157,17 +134,17 @@ export const DashboardPage: React.FC = () => {
         </div>
       </div>
 
-      {/* CTAs */}
-      <div className="flex gap-4">
+      {/* Actions */}
+      <div className="grid grid-cols-2 gap-4">
         <button
           onClick={() => navigate('/bently')}
-          className="flex-1 bg-[#D4AF37] text-[#080808] py-4 font-mono text-xs uppercase tracking-widest hover:bg-[#E8C547] transition-colors"
+          className="btn-primary py-4 text-base"
         >
           Talk to Bently
         </button>
         <button
           onClick={() => navigate('/messages')}
-          className="flex-1 border border-[#1E1E1E] text-[#B0B0B0] py-4 font-mono text-xs uppercase tracking-widest hover:border-[#2A2A2A] hover:text-[#F5F5F5] transition-colors"
+          className="btn-secondary py-4 text-base"
         >
           Messages
         </button>
@@ -177,3 +154,4 @@ export const DashboardPage: React.FC = () => {
 };
 
 export default DashboardPage;
+

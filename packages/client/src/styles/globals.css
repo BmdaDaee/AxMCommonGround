@@ -2,35 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Lora:wght@400;500&display=swap');
+
 @layer base {
   :root {
-    --background: 8 8 8;
+    --background: 249 247 244;
     --primary: 212 175 55;
-    --accent: 157 78 221;
+    --accent: 8 8 8;
     --highlight: 230 57 70;
-    --text: 245 245 245;
-    --border: 30 30 30;
+    --text: 8 8 8;
+    --text-light: 102 102 102;
+    --border: 232 230 227;
   }
 
   body {
-    @apply bg-[#080808] text-[#F5F5F5] font-sans antialiased;
+    @apply bg-[#f9f7f4] text-[#080808] font-[Lora] antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-mono uppercase tracking-widest;
+    @apply font-serif font-normal;
+  }
+
+  h1 {
+    @apply text-4xl leading-tight;
+  }
+
+  h2 {
+    @apply text-3xl;
+  }
+
+  h3 {
+    @apply text-2xl;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-[#D4AF37] text-[#080808] px-4 py-2 rounded-sm font-mono uppercase tracking-tighter hover:bg-[#E8C547] transition-colors;
+    @apply bg-[#D4AF37] text-[#080808] px-6 py-3 rounded-md font-medium text-sm hover:bg-[#E8C547] transition-colors;
+  }
+
+  .btn-secondary {
+    @apply border border-[#e8e6e3] text-[#666] px-6 py-3 rounded-md font-medium text-sm hover:border-[#d4af37] hover:text-[#080808] transition-colors;
+  }
+
+  .btn-ghost {
+    @apply text-[#666] px-4 py-2 rounded-md text-sm hover:text-[#080808] hover:bg-[#f5f3f1] transition-colors;
   }
 
   .card {
-    @apply bg-[#1A1A1A] border border-[#1E1E1E] p-6 rounded-sm;
+    @apply bg-white border border-[#e8e6e3] p-8 rounded-md;
   }
 
   .input {
-    @apply bg-[#0F0F0F] border border-[#1E1E1E] text-[#F5F5F5] px-4 py-2 rounded-sm focus:border-[#D4AF37] outline-none transition-colors;
+    @apply bg-white border border-[#e8e6e3] text-[#080808] px-4 py-3 rounded-md focus:border-[#D4AF37] outline-none transition-colors;
+  }
+
+  .label {
+    @apply text-xs uppercase tracking-widest text-[#999] mb-2 block;
   }
 }
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #e8e6e3;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #d4af37;
+}
+

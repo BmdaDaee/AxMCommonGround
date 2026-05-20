@@ -2,22 +2,18 @@ import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 
 const navItems = [
-  { path: '/dashboard', label: 'Dashboard', icon: '⬡' },
+  { path: '/dashboard', label: 'Dashboard', icon: '◇' },
   { path: '/messages', label: 'Messages', icon: '✉' },
-  { path: '/bently', label: 'Bently AI', icon: '✧' },
-  { path: '/xp', label: 'XP & Rank', icon: '⚡' },
-  { path: '/missions', label: 'Missions', icon: '⚔' },
-  { path: '/journal', label: 'Journal', icon: '✎' },
-  { path: '/deeplyus', label: 'DeeplyUs', icon: '♥' },
-  { path: '/calendar', label: 'Calendar', icon: '📅' },
+  { path: '/bently', label: 'Bently', icon: '◆' },
+  { path: '/deeplyus', label: 'DeeplyUs', icon: '♡' },
+  { path: '/journal', label: 'Journal', icon: '◇' },
+  { path: '/calendar', label: 'Calendar', icon: '○' },
+  { path: '/xp', label: 'Progress', icon: '✧' },
+  { path: '/missions', label: 'Missions', icon: '▪' },
   { path: '/settings', label: 'Settings', icon: '⚙' },
 ];
 
-export interface LayoutProps {
-  children?: React.ReactNode;
-}
-
-export const Layout: React.FC<LayoutProps> = ({ children }) => {
+export const Layout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -26,50 +22,58 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     navigate('/login');
   };
 
+  const isActive = (path: string) => location.pathname === path;
+
   return (
-    <div className="flex min-h-screen bg-[#080808] text-[#F5F5F5]">
+    <div className="flex min-h-screen bg-[#f9f7f4]">
       {/* Sidebar */}
-      <aside className="w-64 border-r border-[#1E1E1E] flex flex-col">
-        <div className="p-8">
-          <h2 className="text-[#D4AF37] text-xl font-mono tracking-tighter">CommonGround</h2>
+      <aside className="w-72 border-r border-[#e8e6e3] flex flex-col bg-white">
+        {/* Header */}
+        <div className="p-8 border-b border-[#e8e6e3]">
+          <p className="text-[#888] text-xs tracking-widest uppercase mb-3">CommonGround</p>
+          <h1 className="text-[#080808] text-2xl font-serif leading-tight">
+            A third<br />presence.
+          </h1>
         </div>
-        
-        <nav className="flex-1 px-4 space-y-1">
+
+        {/* Navigation */}
+        <nav className="flex-1 px-6 py-8 space-y-1">
           {navItems.map((item) => (
             <Link
               key={item.path}
               to={item.path}
-              className={`flex items-center gap-3 px-4 py-3 rounded-sm font-mono text-xs uppercase tracking-widest transition-colors ${
-                location.pathname === item.path 
-                  ? 'bg-[#1A1A1A] text-[#D4AF37] border-l-2 border-[#D4AF37]' 
-                  : 'text-[#B0B0B0] hover:bg-[#0F0F0F] hover:text-[#F5F5F5]'
+              className={`flex items-center gap-3 px-4 py-3 rounded-md transition-all duration-200 ${
+                isActive(item.path)
+                  ? 'bg-[#f5f3f1] text-[#D4AF37]'
+                  : 'text-[#666] hover:text-[#080808] hover:bg-[#f9f7f4]'
               }`}
             >
-              <span className="text-lg">{item.icon}</span>
-              {item.label}
+              <span className="text-sm w-5">{item.icon}</span>
+              <span className="text-sm font-light">{item.label}</span>
             </Link>
           ))}
         </nav>
 
-        <div className="p-4 border-t border-[#1E1E1E]">
-          <button 
+        {/* Footer */}
+        <div className="p-6 border-t border-[#e8e6e3] space-y-4">
+          <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-4 py-3 text-[#B0B0B0] hover:text-[#E63946] font-mono text-xs uppercase tracking-widest transition-colors"
+            className="w-full text-left px-4 py-3 text-xs text-[#999] hover:text-[#E63946] transition-colors font-light"
           >
-            <span>⏻</span>
             Logout
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-12 overflow-y-auto">
-        <div className="max-w-5xl mx-auto">
-          {children || <Outlet />}
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-6xl mx-auto px-12 py-16">
+          {<Outlet />}
         </div>
       </main>
     </div>
   );
-}
+};
 
 export default Layout;
+
