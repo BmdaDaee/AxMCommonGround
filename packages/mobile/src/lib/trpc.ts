@@ -7,16 +7,17 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'https://cgo.anarchyxmayhem.c
 
 export const trpc = createTRPCReact<AppRouter>();
 
-export async function createTRPCClient() {
-  const token = await SecureStore.getItemAsync('authToken');
-
+export function createTRPCClient() {
   return trpc.createClient({
     links: [
       httpBatchLink({
         url: `${API_URL}/trpc`,
-        headers: {
-          ...(token && { Authorization: `Bearer ${token}` }),
-          'Content-Type': 'application/json',
+        async headers() {
+          const token = await SecureStore.getItemAsync('authToken');
+          return {
+            ...(token && { Authorization: `Bearer ${token}` }),
+            'Content-Type': 'application/json',
+          };
         },
       }),
     ],

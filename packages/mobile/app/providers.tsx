@@ -4,17 +4,7 @@ import { trpc, createTRPCClient } from '../src/lib/trpc';
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient());
-  const [trpcClient, setTrpcClient] = useState<any>(null);
-
-  React.useEffect(() => {
-    createTRPCClient().then(client => {
-      setTrpcClient(client);
-    });
-  }, []);
-
-  if (!trpcClient) {
-    return null; // Or loading screen
-  }
+  const [trpcClient] = useState(() => createTRPCClient());
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
