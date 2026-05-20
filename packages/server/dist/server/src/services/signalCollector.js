@@ -106,17 +106,19 @@ async function computeActivation(db, pairId, user1Id, user2Id) {
         'JOURNAL_ENTRY',
         'REWRITE_APPLIED',
     ];
-    const rows = await db
-        .select({ source: xpEvents.source, count: sql `count(*)::int` })
-        .from(xpEvents)
-        .where(and(eq(xpEvents.pairId, pairId), gte(xpEvents.createdAt, since), sql `${xpEvents.source} = ANY(${intentionalSources})`))
-        .groupBy(xpEvents.source);
+    // Run database queries in parallel
+    const [rows, journalRows] = await Promise.all([
+        db
+            .select({ source: xpEvents.source, count: sql `count(*)::int` })
+            .from(xpEvents)
+            .where(and(eq(xpEvents.pairId, pairId), gte(xpEvents.createdAt, since), sql `${xpEvents.source} = ANY(${intentionalSources})`))
+            .groupBy(xpEvents.source),
+        db
+            .select({ count: sql `count(*)::int` })
+            .from(journalEntries)
+            .where(and(eq(journalEntries.pairId, pairId), gte(journalEntries.createdAt, since))),
+    ]);
     const totalIntentionalEvents = rows.reduce((sum, r) => sum + r.count, 0);
-    // Also count journal entries from both users
-    const journalRows = await db
-        .select({ count: sql `count(*)::int` })
-        .from(journalEntries)
-        .where(and(eq(journalEntries.pairId, pairId), gte(journalEntries.createdAt, since)));
     const journalCount = journalRows[0]?.count ?? 0;
     // 10 intentional events per week across the pair = fully activated
     const eventScore = Math.min(100, ((totalIntentionalEvents + journalCount) / 10) * 100);
