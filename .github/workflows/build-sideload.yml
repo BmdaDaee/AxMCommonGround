@@ -146,7 +146,7 @@ jobs:
       - name: Create build summary
         run: |
           mkdir -p sideload-builds/${{ steps.metadata.outputs.build_dir }}
-          cp ./artifacts/android/release/app-release.apk sideload-builds/${{ steps.metadata.outputs.build_dir }}/CommonGround-${{ steps.metadata.outputs.timestamp }}.apk
+          cp ./artifacts/android/app-release.apk sideload-builds/${{ steps.metadata.outputs.build_dir }}/CommonGround-${{ steps.metadata.outputs.timestamp }}.apk
           cp ./artifacts/ios/CommonGround.ipa sideload-builds/${{ steps.metadata.outputs.build_dir }}/CommonGround-${{ steps.metadata.outputs.timestamp }}.ipa
           
           cat > sideload-builds/${{ steps.metadata.outputs.build_dir }}/BUILD_INFO.txt << 'BUILD_INFO'
