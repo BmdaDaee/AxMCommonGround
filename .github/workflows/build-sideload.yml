@@ -5,7 +5,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'packages/mobile/**'
+      - 'packages/mobile/*)�
       - '.github/workflows/build-sideload.yml'
 
 jobs:
@@ -121,6 +121,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Generate build metadata
+        id: metadata
+        run: |
+          TIMESTAMP=$(date -u +'%Y%m%d-%H%M%S')
+          COMMIT_SHORT=$(git rev-parse --short HEAD)
+          TAG_NAME="sideload-${{ github.run_number }}-${TIMESTAMP}-${COMMIT_SHORT}"
+          echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
+          echo "commit_short=${COMMIT_SHORT}" >> $GITHUB_OUTPUT
+      
       - name: Download Android APK
         uses: actions/download-artifact@v4
         with:
@@ -139,16 +149,33 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: sideload-${{ github.run_number }}
-          release_name: Sideload Build ${{ github.run_number }}
+          tag_name: ${{ steps.metadata.outputs.tag_name }}
+          release_name: Sideload Build #${{ github.run_number }} (${{ steps.metadata.outputs.timestamp }})
           body: |
             # CommonGround Sideload Build
             
-            Download the APK and IPA files below for sideloading:
-            - **Android APK**: Use with Sideloadly or ADB
-            - **iOS IPA**: Use with AltStore, Sideloadly, or Xcode
+            **Build Details**
+            - Run #: `${{ github.run_number }}`
+            - Commit: [`${{ steps.metadata.outputs.commit_short }}`](https://github.com/BmdaDaee/AxMCommonGround/commit/${{ github.sha }})
+            - Timestamp: `${{ steps.metadata.outputs.timestamp }}`
+            - Attempt: `${{ github.run_attempt }}`
+            
+            **Installation Instructions**
+            
+            ### Android (APK)
+            - **Sideloadly**: Connect device → drag & drop APK
+            - **ADB**: `adb install CommonGround.apk`
+            - **F-Droid**: Add as local repository
+            
+            ### iOS (IPA)
+            - **AltStore**: Sideload via app
+            - **Sideloadly**: Connect device → select IPA
+            - **Xcode**: Window → Devices → drag & drop IPA
+            
+            ---
+            *Sideload builds are for development and testing. Not for production distribution.*
           draft: false
-          prerelease: false
+          prerelease: true
       
       - name: Upload APK to Release
         uses: actions/upload-release-asset@v1
@@ -157,7 +184,7 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./artifacts/android/release/app-release.apk
-          asset_name: CommonGround.apk
+          asset_name: CommonGround-${{ steps.metadata.outputs.timestamp }}.apk
           asset_content_type: application/vnd.android.package-archive
       
       - name: Upload IPA to Release
@@ -167,5 +194,29 @@ jobs:
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./artifacts/ios/CommonGround.ipa
-          asset_name: CommonGround.ipa
+          asset_name: CommonGround-${{ steps.metadata.outputs.timestamp }}.ipa
           asset_content_type: application/octet-stream
+
+  cleanup-old-releases:
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Clean up old sideload releases (keep last 10)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKET }}
+        run: |
+          # Get all sideload releases, sorted by creation date
+          RELEASES=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/releases" \
+            | jq -r '.[] | select(.tag_name | startswith("sideload-")) | .id' | tail -n +11)
+          
+          # Delete releases beyond the 10 most recent
+          for RELEASE_ID in $RELEASES; do
+            curl -X DELETE -H "Authorization: token $GITHUB_TOKEN" \
+              "https://api.github.com/repos/${{ github.repository }}/releases/$RELEASE_ID"
+            echo "Deleted release $RELEASE_ID"
+          done
