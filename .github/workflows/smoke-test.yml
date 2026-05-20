@@ -1,0 +1,46 @@
+name: Smoke Test - Production Contract
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Run every 6 hours to catch silent breakage
+    - cron: '0 */6 * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'packages/server/**'
+      - 'packages/mobile/src/lib/trpc.ts'
+      - '.github/workflows/smoke-test.yml'
+
+jobs:
+  contract-check:
+    name: Verify API contract matches mobile expectations
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install minimal deps
+        run: npm install --no-save node-fetch@3
+
+      - name: Run smoke test against Railway
+        env:
+          API_URL: ${{ vars.API_URL || 'https://cgo.anarchyxmayhem.com' }}
+        run: node .github/scripts/smoke-test.mjs
+
+      - name: Report status
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Production contract is intact"
+          else
+            echo "❌ Contract drift detected. Mobile app may break."
+            echo "Check the test output above for which endpoint failed."
+          fi
