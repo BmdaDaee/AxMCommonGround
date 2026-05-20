@@ -126,7 +126,7 @@ jobs:
         run: |
           TIMESTAMP=$(date -u +'%Y%m%d-%H%M%S')
           COMMIT_SHORT=$(git rev-parse --short HEAD)
-          TAG_NAME="sideload-${{ github.run_number }}-${TIMESTAMP}-${COMMIT_SHORT}"
+          TAG_NAME="build-${{ github.run_number }}-${TIMESTAMP}-${COMMIT_SHORT}"
           echo "tag_name=${TAG_NAME}" >> $GITHUB_OUTPUT
           echo "timestamp=${TIMESTAMP}" >> $GITHUB_OUTPUT
           echo "commit_short=${COMMIT_SHORT}" >> $GITHUB_OUTPUT
@@ -212,7 +212,7 @@ jobs:
           # Get all sideload releases, sorted by creation date
           RELEASES=$(curl -s -H "Authorization: token $GITHUB_TOKEN" \
             "https://api.github.com/repos/${{ github.repository }}/releases" \
-            | jq -r '.[] | select(.tag_name | startswith("sideload-")) | .id' | tail -n +11)
+            | jq -r '.[] | select(.tag_name | startswith("build-")) | .id' | tail -n +11)
           
           # Delete releases beyond the 10 most recent
           for RELEASE_ID in $RELEASES; do
