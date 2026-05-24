@@ -1,0 +1,112 @@
+{
+  "theme": "LIGHT",
+  "archetype": "1 (Organic & Earthy)",
+  "vibe": "Bold modern SaaS feel blended with a clean, trustworthy civic/community foundation. Grounded, physical, authoritative.",
+  "colors": {
+    "background_base": "#F9F9F6",
+    "background_alt": "#F0EFEA",
+    "primary": "#163832",
+    "primary_hover": "#215249",
+    "accent": "#CC5A47",
+    "accent_hover": "#DF6C59",
+    "text_primary": "#0F1E1A",
+    "text_secondary": "#4A5A55",
+    "border": "#E2E1D9",
+    "surface": "#FFFFFF",
+    "status": {
+      "success": "#2D6A4F",
+      "warning": "#F4A261",
+      "error": "#E63946"
+    }
+  },
+  "typography": {
+    "heading_font": "Outfit",
+    "body_font": "Manrope",
+    "heading_sizes": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-none font-black",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-bold",
+      "h3": "text-xl sm:text-2xl font-bold",
+      "h4": "text-lg sm:text-xl font-bold"
+    },
+    "body_sizes": {
+      "base": "text-base leading-relaxed",
+      "small": "text-sm",
+      "label": "text-xs tracking-[0.2em] uppercase font-bold"
+    }
+  },
+  "spacing_and_layout": {
+    "philosophy": "Generous Spacing: Use 2-3x more spacing than typical designs. Use p-8, p-12, p-16 for structural padding.",
+    "containers": "Containers with borders must have internal padding (p-6 or p-8) to prevent text collision.",
+    "grid_modes": {
+      "landing": "The 'Tetris' Grid: grid-cols-1 md:grid-cols-12 with wide gap-8 to gap-12. Asymmetrical span logic.",
+      "dashboard": "The 'Control Room' Grid: grid-cols-1 md:grid-cols-4 with tight gap-4 or gap-6."
+    }
+  },
+  "surfaces_and_borders": {
+    "cards": "Flat solid surfaces. 1px crisp borders (border-border). No default shadow. Hover: slight lift (-translate-y-1) and soft shadow-lg.",
+    "header": "Crystal Glassmorphism if content scrolls under: backdrop-blur-xl bg-[#F9F9F6]/70 border-b border-[#E2E1D9]/50.",
+    "dashboard_widgets": "Neumorphic tactile variant mixed with grid borders. Soft backgrounds matching parent, sharp 1px inner contrast borders."
+  },
+  "components": {
+    "buttons": "Primary: bg-[#163832] text-white hover:bg-[#215249] rounded-none or rounded-sm. Accent: bg-[#CC5A47] text-white. Apply consistent right/left paddings.",
+    "inputs": "Shadcn defaults heavily customized: bg-white border border-[#E2E1D9] focus:border-[#163832] focus:ring-1 focus:ring-[#163832].",
+    "nav": "Visible navigation bar on desktop with Logo + 3-5 links + CTA. No hamburger on desktop.",
+    "forms": "Use Shadcn Form, Input, Select. Never use native raw inputs."
+  },
+  "interactions_and_motion": {
+    "hover_states": "Always explicitly set text color on hover. e.g., hover:bg-[#163832] hover:text-white.",
+    "transitions": "Use specific transition properties, not 'all'. transition-transform duration-200 ease-out.",
+    "focus": "Focus states must have higher contrast than default state."
+  },
+  "assets": {
+    "icons": {
+      "library": "lucide-react",
+      "style": "Clean, simple, consistent stroke width."
+    },
+    "images": [
+      {
+        "category": "hero_abstract_common_ground",
+        "url": "https://static.prod-images.emergentagent.com/jobs/e973329e-3eeb-4b62-b491-0f73f54e7018/images/de8816e0e05fcfcdf13d26cfadd7ea72ba3ec443f9b330aff603611508f79c6e.png",
+        "description": "Minimalist abstract 3D illustration of finding common ground. Use in landing page hero or about section."
+      },
+      {
+        "category": "auth_background",
+        "url": "https://static.prod-images.emergentagent.com/jobs/e973329e-3eeb-4b62-b491-0f73f54e7018/images/a6c3eca8a6dcf4e888d74c58ffc4aafc92bae3e1d56a9c5d19db3416a6a581c2.png",
+        "description": "Subtle texture for authentication pages (login/signup) split-screen background."
+      },
+      {
+        "category": "community_discussion_1",
+        "url": "https://images.unsplash.com/photo-1758275557142-e4e5e7842d52?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTB8MHwxfHNlYXJjaHwxfHxkaXZlcnNlJTIwcGVvcGxlJTIwdGFsa2luZyUyMGNvbW11bml0eXxlbnwwfHx8fDE3Nzk2NTE0NjF8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Friends in park - use for community engagement or 'Posts/Discussions' feature highlight."
+      },
+      {
+        "category": "community_discussion_2",
+        "url": "https://images.unsplash.com/photo-1772471586766-477c0f97a787?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxOTB8MHwxfHNlYXJjaHwzfHxkaXZlcnNlJTIwcGVvcGxlJTIwdGFsa2luZyUyMGNvbW11bml0eXxlbnwwfHx8fDE3Nzk2NTE0NjF8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Woman smiling - use for matching or connection feature highlight."
+      },
+      {
+        "category": "avatar_placeholder_1",
+        "url": "https://images.unsplash.com/photo-1701728667207-54b43dbdab97?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAxODF8MHwxfHNlYXJjaHw0fHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0JTIwZGl2ZXJzZXxlbnwwfHx8fDE3Nzk2NTE0NjF8MA&ixlib=rb-4.1.0&q=85",
+        "description": "User profile avatar placeholder."
+      },
+      {
+        "category": "avatar_placeholder_2",
+        "url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAxODF8MHwxfHNlYXJjaHwxfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0JTIwZGl2ZXJzZXxlbnwwfHx8fDE3Nzk2NTE0NjF8MA&ixlib=rb-4.1.0&q=85",
+        "description": "User profile avatar placeholder."
+      },
+      {
+        "category": "avatar_placeholder_3",
+        "url": "https://images.unsplash.com/photo-1609436132311-e4b0c9370469?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAxODF8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjBoZWFkc2hvdCUyMHBvcnRyYWl0JTIwZGl2ZXJzZXxlbnwwfHx8fDE3Nzk2NTE0NjF8MA&ixlib=rb-4.1.0&q=85",
+        "description": "User profile avatar placeholder."
+      }
+    ]
+  },
+  "instructions_to_main_agent": [
+    "Use standard React and Tailwind CSS.",
+    "Do NOT use HTML raw components for complex UI like Tabs, Modals, Dropdowns. Use Shadcn components and customize them using Tailwind classes to match this design guide.",
+    "Apply `data-testid` to all interactive elements for testing.",
+    "When displaying user posts or matching screens, ensure generous spacing and crisp borders.",
+    "Avoid centering everything. Use left alignment for readable community discussions and feeds.",
+    "Implement the MVP features: Authentication (Email + Google), User Profiles & Matching, Posts/Discussions, Admin Dashboard."
+  ]
+}
