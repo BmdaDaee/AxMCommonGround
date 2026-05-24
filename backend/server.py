@@ -12,11 +12,14 @@ from datetime import datetime, timezone, timedelta
 import secrets
 import bcrypt
 import requests
+import base64
+import urllib.parse
 try:
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
 except ImportError:  # pragma: no cover
     LlmChat = None
     UserMessage = None
+    ImageContent = None
 
 
 ROOT_DIR = Path(__file__).parent
@@ -121,6 +124,18 @@ class SettingsUpdate(BaseModel):
     notifications_enabled: Optional[bool] = None
     email_digest: Optional[bool] = None
     language: Optional[str] = None
+
+
+class AvatarGenerate(BaseModel):
+    prompt: str = Field(default="", max_length=800)
+    zodiac_sign: str = Field(default="", max_length=40)
+    style: str = Field(default="editorial mystical portrait", max_length=80)
+
+
+class HoroscopeRequest(BaseModel):
+    zodiac_sign: str = Field(default="", max_length=40)
+    partner_zodiac_sign: str = Field(default="", max_length=40)
+    focus: str = Field(default="communication", max_length=80)
 
 
 class StatusCheck(BaseModel):
@@ -264,6 +279,57 @@ def clean_bently_text(text: str) -> str:
         .replace("\n\n", "\n")
         .strip()
     )
+
+
+def svg_placeholder(title: str, subtitle: str, bg: str = "#0F0F0F", accent: str = "#D4AF37") -> str:
+    safe_title = title[:36].replace("&", "and")
+    safe_subtitle = subtitle[:58].replace("&", "and")
+    svg = f"""
+    <svg xmlns='http://www.w3.org/2000/svg' width='1024' height='1024' viewBox='0 0 1024 1024'>
+      <defs><radialGradient id='g' cx='50%' cy='38%' r='70%'><stop offset='0%' stop-color='{accent}' stop-opacity='.34'/><stop offset='100%' stop-color='{bg}'/></radialGradient></defs>
+      <rect width='1024' height='1024' fill='url(#g)'/>
+      <circle cx='512' cy='392' r='142' fill='{accent}' fill-opacity='.18' stroke='{accent}' stroke-width='5'/>
+      <path d='M284 792c38-146 418-146 456 0' fill='{accent}' fill-opacity='.16' stroke='{accent}' stroke-width='5'/>
+      <text x='512' y='112' text-anchor='middle' fill='{accent}' font-size='34' font-family='Georgia' letter-spacing='7'>{safe_title}</text>
+      <text x='512' y='912' text-anchor='middle' fill='#f5f5f5' font-size='28' font-family='monospace' letter-spacing='5'>{safe_subtitle}</text>
+    </svg>
+    """
+    return "data:image/svg+xml;charset=utf-8," + urllib.parse.quote(svg)
+
+
+async def generate_ai_image(prompt: str, session_id: str) -> Optional[str]:
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not (LlmChat and UserMessage and api_key):
+        return None
+    try:
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=session_id,
+            system_message="Create symbolic, tasteful relationship app artwork. No text in image. Editorial, premium, warm, emotionally grounded.",
+        ).with_model("gemini", "gemini-3.1-flash-image-preview").with_params(modalities=["image", "text"])
+        _, images = await chat.send_message_multimodal_response(UserMessage(text=prompt))
+        if images:
+            img = images[0]
+            return f"data:{img.get('mime_type', 'image/png')};base64,{img['data']}"
+    except Exception as exc:
+        logger.warning("AI image fallback used: %s", exc)
+    return None
+
+
+async def generate_ai_text(prompt: str, session_id: str, fallback: str) -> str:
+    api_key = os.environ.get("EMERGENT_LLM_KEY")
+    if not (LlmChat and UserMessage and api_key):
+        return fallback
+    try:
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=session_id,
+            system_message="You write concise astrological relationship guidance for CommonGround. Be practical, warm, non-deterministic, and focused on communication patterns. Avoid medical, legal, or absolute predictions.",
+        ).with_model("anthropic", "claude-sonnet-4-6")
+        return clean_bently_text(await chat.send_message(UserMessage(text=prompt)))
+    except Exception as exc:
+        logger.warning("AI text fallback used: %s", exc)
+        return fallback
 
 
 def set_session_cookie(response: Response, token: str) -> None:
@@ -762,6 +828,124 @@ async def update_settings(input: SettingsUpdate, request: Request):
     updates["updated_at"] = now_iso()
     await db.settings.update_one({"user_id": user["user_id"]}, {"$set": {**updates, "user_id": user["user_id"]}}, upsert=True)
     return await db.settings.find_one({"user_id": user["user_id"]}, {"_id": 0})
+
+
+@api_router.get("/ai/assets")
+async def get_ai_assets(request: Request):
+    user = await get_current_user(request)
+    assets = await db.ai_assets.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    user_doc = await db.users.find_one({"user_id": user["user_id"]}, {"_id": 0, "password_hash": 0})
+    avatar_url = user_doc.get("avatar_url") or user_doc.get("picture") or svg_placeholder(user["name"], "AI AVATAR PLACEHOLDER")
+    couple = next((asset for asset in assets if asset.get("asset_type") == "couple_portrait"), None)
+    if not couple:
+        couple = {
+            "asset_id": "placeholder_couple_portrait",
+            "asset_type": "couple_portrait",
+            "image_url": svg_placeholder("COUPLE PORTRAIT", "GENERATES AFTER AVATARS", "#080808", "#9D4EDD"),
+            "prompt": "Placeholder couple portrait until user avatars are generated.",
+            "created_at": now_iso(),
+            "is_placeholder": True,
+        }
+    modules = [asset for asset in assets if asset.get("asset_type") == "module_art"]
+    if not modules:
+        modules = [
+            {"asset_id": "placeholder_dashboard_aura", "asset_type": "module_art", "module": "dashboard", "image_url": svg_placeholder("RELATIONAL AURA", "DASHBOARD MODULE", "#163832", "#D4AF37"), "is_placeholder": True},
+            {"asset_id": "placeholder_mission_oracle", "asset_type": "module_art", "module": "missions", "image_url": svg_placeholder("MISSION ORACLE", "GROWTH MODULE", "#080808", "#D4AF37"), "is_placeholder": True},
+        ]
+    return {"user_avatar": avatar_url, "couple_portrait": couple, "module_art": modules, "items": assets}
+
+
+@api_router.post("/ai/avatar")
+async def generate_avatar(input: AvatarGenerate, request: Request):
+    user = await get_current_user(request)
+    prompt = (
+        f"Create a premium editorial avatar portrait for {user['name']}. "
+        f"Style: {input.style}. Zodiac/energy: {input.zodiac_sign or 'not specified'}. "
+        f"User description: {input.prompt or user.get('bio') or 'warm, emotionally intelligent relationship communicator'}. "
+        "Close portrait, soft cinematic light, no text, no logos, square composition."
+    )
+    image_url = await generate_ai_image(prompt, f"avatar-{user['user_id']}-{uuid.uuid4().hex[:8]}")
+    is_placeholder = False
+    if not image_url:
+        image_url = svg_placeholder(user["name"], input.zodiac_sign or "AI AVATAR", "#080808", "#D4AF37")
+        is_placeholder = True
+    asset = {
+        "asset_id": f"asset_{uuid.uuid4().hex[:12]}",
+        "user_id": user["user_id"],
+        "asset_type": "user_avatar",
+        "image_url": image_url,
+        "prompt": prompt,
+        "zodiac_sign": input.zodiac_sign,
+        "created_at": now_iso(),
+        "is_placeholder": is_placeholder,
+    }
+    await db.ai_assets.insert_one(asset.copy())
+    await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"avatar_url": image_url, "picture": image_url, "zodiac_sign": input.zodiac_sign, "avatar_prompt": input.prompt}})
+
+    couple_prompt = (
+        f"Create a symbolic couple avatar portrait inspired by {user['name']}'s generated avatar. "
+        "Two abstract human presences, relational balance, CommonGround aesthetic, no text, square editorial portrait."
+    )
+    couple_url = await generate_ai_image(couple_prompt, f"couple-{user['user_id']}-{uuid.uuid4().hex[:8]}")
+    couple_placeholder = False
+    if not couple_url:
+        couple_url = svg_placeholder("COUPLE PORTRAIT", input.zodiac_sign or "RELATIONAL PAIR", "#080808", "#9D4EDD")
+        couple_placeholder = True
+    couple_asset = {
+        "asset_id": f"asset_{uuid.uuid4().hex[:12]}",
+        "user_id": user["user_id"],
+        "asset_type": "couple_portrait",
+        "image_url": couple_url,
+        "prompt": couple_prompt,
+        "created_at": now_iso(),
+        "is_placeholder": couple_placeholder,
+        "auto_generated": True,
+    }
+    await db.ai_assets.insert_one(couple_asset.copy())
+    return {"avatar": asset, "couple_portrait": couple_asset}
+
+
+@api_router.post("/ai/module-art/{module_name}")
+async def generate_module_art(module_name: str, request: Request):
+    user = await get_current_user(request)
+    prompt = f"Create symbolic app card artwork for the CommonGround {module_name} module. Relational astrology, emotional state, gold on obsidian, no text, premium editorial square image."
+    image_url = await generate_ai_image(prompt, f"module-{module_name}-{user['user_id']}-{uuid.uuid4().hex[:8]}")
+    is_placeholder = False
+    if not image_url:
+        image_url = svg_placeholder(module_name.upper(), "AI MODULE ART", "#080808", "#D4AF37")
+        is_placeholder = True
+    asset = {"asset_id": f"asset_{uuid.uuid4().hex[:12]}", "user_id": user["user_id"], "asset_type": "module_art", "module": module_name, "image_url": image_url, "prompt": prompt, "created_at": now_iso(), "is_placeholder": is_placeholder}
+    await db.ai_assets.insert_one(asset.copy())
+    return asset
+
+
+@api_router.post("/ai/horoscope")
+async def generate_horoscope(input: HoroscopeRequest, request: Request):
+    user = await get_current_user(request)
+    today = datetime.now(timezone.utc).date().isoformat()
+    existing = await db.horoscopes.find_one({"user_id": user["user_id"], "date": today, "zodiac_sign": input.zodiac_sign, "partner_zodiac_sign": input.partner_zodiac_sign}, {"_id": 0})
+    if existing:
+        return existing
+    sign = input.zodiac_sign or user.get("zodiac_sign") or "unspecified"
+    partner = input.partner_zodiac_sign or "partner unspecified"
+    daily = await generate_ai_text(
+        f"Write today's individual horoscope for {sign}, focused on {input.focus}. 70 words max.",
+        f"horoscope-daily-{user['user_id']}-{today}",
+        f"Today asks {sign} energy to slow down before reacting. Name the value underneath the feeling, then choose one direct sentence instead of a defensive explanation.",
+    )
+    couple = await generate_ai_text(
+        f"Write a couple compatibility horoscope for {sign} and {partner}. Focus on communication, repair, and shared timing. 90 words max.",
+        f"horoscope-couple-{user['user_id']}-{today}",
+        f"The {sign} and {partner} pairing benefits from naming expectations before decisions. One person may seek momentum while the other needs safety; the bridge is a clear, kind request.",
+    )
+    timing = await generate_ai_text(
+        f"Write relationship timing and energy guidance for {sign} with partner {partner}. Include one best conversation window and one avoidant pattern. 80 words max.",
+        f"horoscope-timing-{user['user_id']}-{today}",
+        "The best window is after responsibilities are settled, not during transition moments. Avoid the pattern of asking for reassurance when what you need is a concrete agreement.",
+    )
+    doc = {"horoscope_id": f"horo_{uuid.uuid4().hex[:12]}", "user_id": user["user_id"], "date": today, "zodiac_sign": sign, "partner_zodiac_sign": partner, "focus": input.focus, "daily": daily, "couple": couple, "timing": timing, "created_at": now_iso()}
+    await db.horoscopes.insert_one(doc.copy())
+    return doc
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
