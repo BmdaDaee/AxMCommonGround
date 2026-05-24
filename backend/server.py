@@ -256,6 +256,16 @@ def serialize_user(doc: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def clean_bently_text(text: str) -> str:
+    return (
+        text.replace("**", "")
+        .replace("*\"", "\"")
+        .replace("\n- ", "\n")
+        .replace("\n\n", "\n")
+        .strip()
+    )
+
+
 def set_session_cookie(response: Response, token: str) -> None:
     response.set_cookie(
         key="session_token",
@@ -633,7 +643,7 @@ async def bently_prompt(input: BentlyPrompt, request: Request):
     if LlmChat and UserMessage and api_key:
         try:
             chat = LlmChat(api_key=api_key, session_id=f"bently-{user['user_id']}", system_message=system).with_model("anthropic", "claude-sonnet-4-6")
-            response_text = await chat.send_message(UserMessage(text=input.message))
+            response_text = clean_bently_text(await chat.send_message(UserMessage(text=input.message)))
             provider = "claude-sonnet-4-6"
         except Exception as exc:
             logger.warning("Bently AI fallback used: %s", exc)
