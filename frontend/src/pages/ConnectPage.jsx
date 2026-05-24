@@ -22,6 +22,8 @@ export default function ConnectPage({ mode }) {
     },
     onError: (error) => toast.error(error.message),
   });
+  const invite = statusQuery.data?.invite;
+  const pair = statusQuery.data?.pair;
 
   useEffect(() => {
     if (mode === 'invite' && !statusQuery.data?.pair && !statusQuery.data?.invite && !createInvite.isPending) {
@@ -32,9 +34,6 @@ export default function ConnectPage({ mode }) {
   useEffect(() => {
     if (pair) navigate('/dashboard');
   }, [pair]);
-
-  const invite = statusQuery.data?.invite;
-  const pair = statusQuery.data?.pair;
 
   const countdown = useMemo(() => {
     if (!invite?.expiresAt) return '7 day invite window';
