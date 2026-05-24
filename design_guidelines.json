@@ -1,0 +1,137 @@
+{
+  "theme_and_archetype": {
+    "domain": "Premium Relationship Communication App (CommonGround)",
+    "archetype": "Archetype 1 (Organic & Earthy) - Elevated Editorial Variant",
+    "theme": "LIGHT",
+    "vibe": "Intimate, warm, growth-oriented, premium, calm, cinematic",
+    "rationale": "For an app managing relationships, intimacy, and mental well-being (via Bently AI), the UI must feel safe, organic, and premium. A blend of warm earthy tones with elegant typography evokes an 'Old Money Tech' or 'Editorial Wellness' aesthetic."
+  },
+  "color_system": {
+    "backgrounds": {
+      "base": "#F9F6F0",
+      "surface": "#FDFBF7",
+      "glass": "rgba(255, 255, 255, 0.7)",
+      "inverted": "#2C3B2E"
+    },
+    "brand_colors": {
+      "primary": "#C25934",
+      "secondary": "#8BA88E",
+      "accent": "#E6D5B8"
+    },
+    "text": {
+      "primary": "#1A221B",
+      "secondary": "#5C6B5E",
+      "inverted": "#F9F6F0",
+      "accent": "#C25934"
+    },
+    "borders": {
+      "default": "#E6E2DA",
+      "focus": "#8BA88E"
+    },
+    "rules": {
+      "tints": "Never use pure black or pure white. All grays are tinted with olive/warm sand.",
+      "contrast": "Text must pass WCAG AA. Over imagery, use subtle gradient underlays or text-shadow.",
+      "gradients": "Avoid flat gradients. Use noise/grain textures or subtle radial glows to highlight areas."
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Cormorant Garamond",
+      "body": "Manrope",
+      "mono": "JetBrains Mono"
+    },
+    "scales": {
+      "h1_hero": "text-5xl md:text-6xl tracking-tighter leading-none font-semibold",
+      "h2_section": "text-3xl md:text-4xl tracking-tight leading-tight font-medium",
+      "h3_card": "text-xl md:text-2xl tracking-tight font-medium",
+      "body": "text-base leading-relaxed text-secondary",
+      "overline": "text-xs tracking-[0.2em] uppercase font-semibold text-secondary"
+    },
+    "rules": {
+      "pairing": "High contrast pairing: Emotional, high-style Serif for headings (Cormorant Garamond), balanced by extremely sterile and legible Sans-Serif for dashboard data and chat (Manrope).",
+      "weights": "Avoid generic 'bold' everywhere. Use font-light for elegance in big text, or font-semibold for clarity.",
+      "alignment": "Left-align paragraphs and dense content. Center-align hero headings only if symmetric."
+    }
+  },
+  "spacing_and_layout": {
+    "grid_system": {
+      "marketing": "Asymmetric Bento Grid (grid-cols-1 md:grid-cols-12 gap-8).",
+      "dashboard": "Control Room Grid (grid-cols-1 md:grid-cols-4 gap-6).",
+      "mobile": "Strict single column, prioritizing vertical rhythm and sticky bottom action bars for native feel."
+    },
+    "spacing_scale": {
+      "generous": "p-8 md:p-12 for major sections",
+      "cards": "p-6",
+      "gap": "gap-4 to gap-8"
+    },
+    "radius": {
+      "cards": "rounded-2xl",
+      "buttons": "rounded-full",
+      "inputs": "rounded-xl"
+    },
+    "rules": {
+      "breathing_room": "Use 2-3x more spacing than typical SaaS. Value negative space.",
+      "mobile_images": "max-h-[70vh] on mobile to prevent full screen takeover.",
+      "padding_collision": "All containers with borders must have internal padding (p-6) to protect text."
+    }
+  },
+  "component_rules": {
+    "buttons": {
+      "primary": "bg-[#2C3B2E] text-[#F9F6F0] rounded-full hover:bg-[#1A221B] hover:-translate-y-1 transition-transform",
+      "secondary": "bg-transparent border border-[#2C3B2E] text-[#2C3B2E] rounded-full hover:bg-[#2C3B2E]/5",
+      "accent": "bg-[#C25934] text-white rounded-full hover:bg-[#A94A2A]"
+    },
+    "surfaces": {
+      "cards": "bg-[#FDFBF7] border border-[#E6E2DA] rounded-2xl shadow-sm hover:shadow-md transition-shadow",
+      "glass_header": "backdrop-blur-xl bg-[#FDFBF7]/70 border-b border-[#E6E2DA]/50",
+      "chat_bubbles": "Partner: bg-[#FDFBF7] border border-[#E6E2DA]. User: bg-[#2C3B2E] text-white. AI Bently: bg-[#E6D5B8]/30 border border-[#C25934]/20."
+    },
+    "shadcn_overrides": {
+      "inputs": "Remove default focus ring, use custom focus:border-[#8BA88E] focus:ring-1 focus:ring-[#8BA88E]",
+      "dialog": "Use rounded-3xl, remove generic dark overlays, use backdrop-blur-md bg-black/20"
+    }
+  },
+  "motion_and_interaction": {
+    "hover_states": "Subtle -translate-y-1 on cards. Explicit hover text color changes.",
+    "page_transitions": "Framer motion opacity and y-axis drift (y: 10 to 0) on mount.",
+    "micro_interactions": "Heart icons pulse on click. Bently AI typing indicator should feel organic (staggered opacity dots).",
+    "accessibility": "Respect prefers-reduced-motion."
+  },
+  "icons_and_assets": {
+    "icon_library": "@phosphor-icons/react",
+    "icon_style": "Duotone or Thin weights to match the premium editorial feel.",
+    "images": {
+      "hero_auth": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/0c4a90ec-1e65-497e-9609-b972b267c41b/images/7a163b9b91ee484425f171196294773f662f29087864dc2e7057a0be48060565.png",
+        "description": "Abstract organic sage/terracotta backdrop for Auth/Onboarding."
+      },
+      "hero_marketing": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/0c4a90ec-1e65-497e-9609-b972b267c41b/images/386c10e976bf23c0c081e783318f86c6595b366b9dfce710670f54793420ea1d.png",
+        "description": "Cinematic couple holding hands for landing page hero."
+      },
+      "dashboard_texture": {
+        "url": "https://images.unsplash.com/photo-1548746450-48dbc4747adc?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzF8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMHdhcm0lMjB0ZXh0dXJlfGVufDB8fHx8MTc3OTY2MTMxMHww&ixlib=rb-4.1.0&q=85",
+        "description": "Warm abstract texture for journal or mission background cards."
+      },
+      "partnership_placeholder": {
+        "url": "https://images.unsplash.com/photo-1543829969-57899edf981b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwyfHxjb3VwbGUlMjBob2xkaW5nJTIwaGFuZHMlMjBzdW5zZXR8ZW58MHx8fHwxNzc5NjYxMzEwfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Partner profile placeholder or relationship milestone banner."
+      }
+    }
+  },
+  "test_id_rules": {
+    "required": true,
+    "convention": "kebab-case, role-based (e.g., data-testid='login-submit-button', data-testid='bently-ai-chat-input')",
+    "scope": "All interactive elements, forms, critical links, and state-bearing text must have a data-testid."
+  },
+  "implementation_instructions_to_main_agent": [
+    "Install required dependencies: framer-motion, @phosphor-icons/react, lucide-react (if shadcn uses it default, but prefer phosphor for app icons), clsx, tailwind-merge.",
+    "Setup routing for Mobile (PWA) vs Desktop. The mobile view must feature a sticky bottom navigation bar (Home, Partner, Bently AI, Journal, Settings). Desktop should use a sidebar or top elegant navigation.",
+    "Do NOT use 'Inter' font. Import 'Cormorant Garamond' and 'Manrope' from Google Fonts and configure them in tailwind.config.js.",
+    "Implement Shadcn, but drastically alter the default aesthetics. Remove heavy borders, increase border radius to 2xl/3xl, use the custom organic color palette, and avoid flat vercel-like greys.",
+    "For the Bently AI Chat interface, make it distinct from standard messaging. Use the 'accent' background for Bently's bubbles and a premium glassmorphic input bar.",
+    "Build the dashboard using a 'Bento' style for relationship metrics (Journal streaks, upcoming missions).",
+    "Preserve backend logic if connecting to bmdadaee/axmcommonground. Adapt UI purely to consume the state without breaking it.",
+    "Strictly follow the test_id_rules for every interactive element."
+  ]
+}
