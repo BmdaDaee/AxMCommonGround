@@ -21,6 +21,20 @@ STATE_PROMPTS = {
 }
 
 
+def fallback_bently_response(message: str, state: str) -> str:
+    guidance = {
+        "ALIGNED": "Name what is already working before you ask for anything more.",
+        "DORMANT": "Make the opening smaller and gentler than your first impulse.",
+        "MISALIGNED": "Lead with your feeling and the meaning beneath it, not your argument.",
+        "CAPACITY_BLOCKED": "Ask for one small concrete moment instead of a full emotional reset.",
+        "TRUST_FRACTURED": "Keep the next step observable, specific, and repair-focused.",
+    }
+    return (
+        f"What you’re naming matters. {guidance.get(state, guidance['DORMANT'])} "
+        f"Try starting with: ‘When {message[:70].rstrip('.')}... I notice myself needing a little more clarity and closeness. Can we slow this down together?’"
+    )
+
+
 async def generate_bently_response(session_id: str, message: str, state: str, pair_summary: str) -> str:
     if not EMERGENT_LLM_KEY:
         raise RuntimeError("Missing EMERGENT_LLM_KEY")
@@ -56,7 +70,10 @@ async def generate_bently_response(session_id: str, message: str, state: str, pa
         system_message=system_message,
     ).with_model(MODEL_PROVIDER, MODEL_NAME)
 
-    response = await chat.send_message(UserMessage(text=prompt))
+    try:
+        response = await chat.send_message(UserMessage(text=prompt))
+    except Exception:
+        response = fallback_bently_response(message, state)
 
     collection("bently_entries").insert_many(
         [

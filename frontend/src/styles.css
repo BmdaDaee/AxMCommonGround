@@ -242,6 +242,69 @@ button {
   font-size: 0.92rem;
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.nav-badge {
+  margin-left: auto;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--terracotta);
+  color: white;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.nav-badge.mobile {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  min-width: 18px;
+  height: 18px;
+  font-size: 0.64rem;
+}
+
+.presence-chip, .presence-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(230, 226, 218, 0.9);
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--muted);
+}
+
+.presence-row {
+  width: fit-content;
+}
+
+.presence-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.presence-dot.online {
+  background: #3a9150;
+  box-shadow: 0 0 0 4px rgba(58, 145, 80, 0.15);
+}
+
+.presence-dot.offline {
+  background: #b59f8d;
+}
+
 .content-area {
   padding: 28px;
   padding-bottom: 108px;
@@ -381,6 +444,20 @@ button {
   color: var(--ink);
 }
 
+.upload-dropzone {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 1px dashed rgba(44, 59, 46, 0.26);
+  background: rgba(255, 255, 255, 0.52);
+  color: var(--muted);
+}
+
+.upload-dropzone input {
+  width: 100%;
+}
+
 .textarea {
   min-height: 164px;
   resize: vertical;
@@ -419,6 +496,38 @@ button {
   padding: 22px;
 }
 
+.vault-media-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.vault-media-card {
+  display: grid;
+  gap: 8px;
+  border-radius: 20px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.62);
+  border: 1px solid rgba(230, 226, 218, 0.9);
+}
+
+.vault-media-card img,
+.vault-media-card audio {
+  width: 100%;
+  border-radius: 16px;
+}
+
+.vault-media-card img {
+  aspect-ratio: 1 / 1;
+  object-fit: cover;
+}
+
+.vault-media-card span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  overflow-wrap: anywhere;
+}
+
 .mission-card.complete { opacity: 0.72; }
 
 .chip-row { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -454,6 +563,7 @@ button {
     box-shadow: var(--shadow);
   }
   .mobile-nav-link {
+    position: relative;
     flex-direction: column;
     gap: 6px;
     text-align: center;

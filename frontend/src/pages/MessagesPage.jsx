@@ -14,12 +14,20 @@ export default function MessagesPage({ user }) {
       setContent('');
       queryClient.invalidateQueries({ queryKey: ['messages'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications-summary'] });
     },
     onError: (error) => toast.error(error.message),
   });
 
   const pair = messagesQuery.data?.pair;
   const items = useMemo(() => messagesQuery.data?.items || [], [messagesQuery.data?.items]);
+  const partnerPresence = messagesQuery.data?.partnerPresence;
+
+  useEffect(() => {
+    if (messagesQuery.data) {
+      queryClient.invalidateQueries({ queryKey: ['notifications-summary'] });
+    }
+  }, [messagesQuery.data, queryClient]);
 
   if (!pair) {
     return <section className="empty-card" data-testid="messages-empty-pair-card"><h3 className="section-title">Messages unlock after pairing.</h3><p className="page-subtitle">Invite your partner first, then this thread becomes your shared running conversation.</p></section>;
@@ -33,9 +41,17 @@ export default function MessagesPage({ user }) {
       </div>
 
       <div className="panel page-stack">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }} data-testid="messages-thread-header">
-          <ChatsCircle size={20} weight="duotone" />
-          <strong>{pair.members?.map((member) => member.name).join(' · ')}</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }} data-testid="messages-thread-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <ChatsCircle size={20} weight="duotone" />
+            <strong>{pair.members?.map((member) => member.name).join(' · ')}</strong>
+          </div>
+          {partnerPresence && (
+            <div className="presence-chip" data-testid="messages-partner-presence-chip">
+              <span className={`presence-dot ${partnerPresence.isOnline ? 'online' : 'offline'}`} />
+              <span>{partnerPresence.name} · {partnerPresence.label}</span>
+            </div>
+          )}
         </div>
 
         <div className="message-list" data-testid="messages-thread-list">

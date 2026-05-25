@@ -1,9 +1,11 @@
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, Field
 
 from ai_service import generate_bently_response
@@ -13,6 +15,10 @@ from db import collection, ensure_indexes, make_id, serialize, serialize_many, u
 load_dotenv()
 ensure_indexes()
 
+MEDIA_ROOT = Path("/app/backend/media")
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+ALLOWED_UPLOAD_PREFIXES = ("image/", "audio/")
+
 app = FastAPI(title="CommonGround API")
 app.add_middleware(
     CORSMiddleware,
@@ -21,6 +27,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.mount("/api/media", StaticFiles(directory=str(MEDIA_ROOT)), name="media")
 
 
 class SignupBody(BaseModel):
@@ -87,6 +94,91 @@ def rank_for_xp(xp: int) -> str:
 def aware_from_iso(value: str) -> datetime:
     parsed = datetime.fromisoformat(value)
     return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+
+
+def media_url(relative_path: str) -> str:
+    return f"/api/media/{relative_path}"
+
+
+def normalize_media(entry: dict[str, Any]) -> dict[str, Any]:
+    entry["media"] = entry.get("media", [])
+    return entry
+
+
+def get_user_snapshot(user_id: str) -> dict[str, Any] | None:
+    return serialize(collection("users").find_one({"id": user_id}, {"_id": 0, "passwordHash": 0}))
+
+
+def build_presence(user: dict[str, Any] | None) -> dict[str, Any] | None:
+    if not user:
+        return None
+    last_active = user.get("lastActiveAt")
+    if not last_active:
+        return {"isOnline": False, "label": "Away", "lastActiveAt": None, "name": user.get("name")}
+    last_active_at = aware_from_iso(last_active) if isinstance(last_active, str) else last_active
+    seconds_since = max(0, int((utc_now() - last_active_at).total_seconds()))
+    is_online = seconds_since <= 180
+    if is_online:
+        label = "Online now"
+    elif seconds_since < 3600:
+        label = f"Active {max(1, seconds_since // 60)} min ago"
+    else:
+        label = last_active_at.strftime("Active %b %d")
+    return {
+        "isOnline": is_online,
+        "label": label,
+        "lastActiveAt": last_active_at.isoformat(),
+        "name": user.get("name"),
+    }
+
+
+def unread_filter(pair_id: str, user_id: str) -> dict[str, Any]:
+    return {"pairId": pair_id, "userId": {"$ne": user_id}, "readBy": {"$ne": user_id}}
+
+
+def get_notification_summary(pair: dict[str, Any] | None, user_id: str) -> dict[str, Any]:
+    if not pair:
+        return {"unreadMessages": 0, "latestUnread": None, "partnerPresence": None}
+    partner = get_partner(pair, user_id)
+    partner_user = get_user_snapshot(partner["id"]) if partner else None
+    unread_count = collection("messages").count_documents(unread_filter(pair["id"], user_id))
+    latest_unread = serialize(
+        collection("messages").find_one(unread_filter(pair["id"], user_id), {"_id": 0}, sort=[("createdAt", -1)])
+    )
+    return {
+        "unreadMessages": unread_count,
+        "latestUnread": latest_unread,
+        "partnerPresence": build_presence(partner_user),
+    }
+
+
+async def persist_uploads(files: list[UploadFile], pair_id: str) -> list[dict[str, Any]]:
+    saved: list[dict[str, Any]] = []
+    pair_dir = MEDIA_ROOT / pair_id
+    pair_dir.mkdir(parents=True, exist_ok=True)
+
+    for file in files:
+        if not file.filename:
+            continue
+        content_type = file.content_type or "application/octet-stream"
+        if not content_type.startswith(ALLOWED_UPLOAD_PREFIXES):
+            raise HTTPException(status_code=400, detail="Only image and audio uploads are supported")
+        extension = Path(file.filename).suffix or (".bin" if "/" not in content_type else f'.{content_type.split("/")[1]}')
+        filename = f"{make_id()}{extension.lower()}"
+        relative_path = f"{pair_id}/{filename}"
+        destination = pair_dir / filename
+        content = await file.read()
+        destination.write_bytes(content)
+        saved.append(
+            {
+                "id": make_id(),
+                "name": file.filename,
+                "contentType": content_type,
+                "size": len(content),
+                "url": media_url(relative_path),
+            }
+        )
+    return saved
 
 
 def get_pair_for_user(user_id: str) -> dict[str, Any] | None:
@@ -185,6 +277,7 @@ def ensure_pair_extras(pair: dict[str, Any]) -> None:
                     "title": "Why we began",
                     "description": "A shared reminder of what felt true at the beginning.",
                     "kind": "LETTER",
+                    "media": [],
                     "date": utc_now(),
                 },
                 {
@@ -193,6 +286,7 @@ def ensure_pair_extras(pair: dict[str, Any]) -> None:
                     "title": "The first real repair",
                     "description": "A marker for the moment you both chose understanding over distance.",
                     "kind": "MILESTONE",
+                    "media": [],
                     "date": utc_now() - timedelta(days=2),
                 },
             ]
@@ -417,7 +511,7 @@ def dashboard(current_user: dict[str, Any] = CurrentUser) -> dict[str, Any]:
                 sort=[("createdAt", -1)],
             )
         )
-        return {"user": current_user, "pair": None, "invite": invite}
+        return {"user": current_user, "pair": None, "invite": invite, "notifications": get_notification_summary(None, current_user["id"])}
 
     ensure_pair_extras(pair)
     state = compute_relational_state(pair)
@@ -439,18 +533,30 @@ def dashboard(current_user: dict[str, Any] = CurrentUser) -> dict[str, Any]:
             "xp": current_user.get("xp", 0),
             "rank": current_user.get("rank", rank_for_xp(current_user.get("xp", 0))),
         },
+        "notifications": get_notification_summary(pair, current_user["id"]),
         "missions": missions,
         "upcoming": upcoming,
     }
+
+
+@app.get("/api/notifications/summary")
+def notifications_summary(current_user: dict[str, Any] = CurrentUser) -> dict[str, Any]:
+    pair = get_pair_for_user(current_user["id"])
+    return get_notification_summary(pair, current_user["id"])
 
 
 @app.get("/api/messages")
 def get_messages(current_user: dict[str, Any] = CurrentUser) -> dict[str, Any]:
     pair = get_pair_for_user(current_user["id"])
     if not pair:
-        return {"items": []}
+        return {"items": [], "partnerPresence": None, "unreadCount": 0}
+    collection("messages").update_many(
+        unread_filter(pair["id"], current_user["id"]),
+        {"$addToSet": {"readBy": current_user["id"]}, "$set": {"updatedAt": utc_now()}},
+    )
     docs = list(collection("messages").find({"pairId": pair["id"]}, {"_id": 0}).sort("createdAt", 1))
-    return {"pair": pair, "items": serialize_many(docs)}
+    notifications = get_notification_summary(pair, current_user["id"])
+    return {"pair": pair, "items": serialize_many(docs), "partnerPresence": notifications["partnerPresence"], "unreadCount": notifications["unreadMessages"]}
 
 
 @app.post("/api/messages")
@@ -464,6 +570,7 @@ def post_message(body: MessageBody, current_user: dict[str, Any] = CurrentUser) 
         "userId": current_user["id"],
         "userName": current_user["name"],
         "content": body.content.strip(),
+        "readBy": [current_user["id"]],
         "createdAt": utc_now(),
     }
     collection("messages").insert_one(message)
@@ -591,8 +698,40 @@ def vault(current_user: dict[str, Any] = CurrentUser) -> dict[str, Any]:
     if not pair:
         return {"items": []}
     ensure_pair_extras(pair)
-    docs = serialize_many(list(collection("vault_entries").find({"pairId": pair["id"]}, {"_id": 0}).sort("date", -1)))
+    docs = [normalize_media(item) for item in serialize_many(list(collection("vault_entries").find({"pairId": pair["id"]}, {"_id": 0}).sort("date", -1)))]
     return {"items": docs}
+
+
+@app.post("/api/vault")
+async def create_vault_entry(
+    title: str = Form(...),
+    description: str = Form(""),
+    kind: str = Form("MOMENT"),
+    files: list[UploadFile] = File(default=[]),
+    current_user: dict[str, Any] = CurrentUser,
+) -> dict[str, Any]:
+    pair = get_pair_for_user(current_user["id"])
+    if not pair:
+        raise HTTPException(status_code=400, detail="Create or join a pair first")
+    media = await persist_uploads(files, pair["id"])
+    if not media and not description.strip():
+        raise HTTPException(status_code=400, detail="Add media or a description before saving")
+
+    entry = {
+        "id": make_id(),
+        "pairId": pair["id"],
+        "title": title.strip(),
+        "description": description.strip(),
+        "kind": kind.strip().upper() or "MOMENT",
+        "media": media,
+        "createdBy": current_user["id"],
+        "createdByName": current_user["name"],
+        "date": utc_now(),
+    }
+    collection("vault_entries").insert_one(entry)
+    xp_update = award_xp(current_user["id"], 28)
+    clean_entry = normalize_media(serialize(entry))
+    return {"item": clean_entry, "xp": xp_update["xp"], "rank": xp_update["rank"]}
 
 
 @app.get("/api/settings")

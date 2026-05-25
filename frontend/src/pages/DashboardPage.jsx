@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { CalendarBlank, Sparkle, ChatsCircle, Heartbeat, TrendUp, Target } from '@phosphor-icons/react';
+import { Sparkle, ChatsCircle, Heartbeat, Target, BellRinging, DotOutline } from '@phosphor-icons/react';
 import { api } from '../lib/api';
 import StatePill from '../components/StatePill';
 
@@ -39,6 +39,7 @@ export default function DashboardPage({ user }) {
   }
 
   const metrics = Object.entries(data.state.metrics || {});
+  const notifications = data.notifications || { unreadMessages: 0, partnerPresence: null };
 
   return (
     <section className="page-stack">
@@ -67,6 +68,29 @@ export default function DashboardPage({ user }) {
         <article className="stat-card" data-testid="dashboard-stat-messages"><ChatsCircle size={22} weight="duotone" /><div className="stat-value">{data.stats.messages}</div><p className="page-subtitle">Messages exchanged</p></article>
         <article className="stat-card" data-testid="dashboard-stat-journal"><Heartbeat size={22} weight="duotone" /><div className="stat-value">{data.stats.journalEntries}</div><p className="page-subtitle">Journal reflections</p></article>
         <article className="stat-card" data-testid="dashboard-stat-missions"><Target size={22} weight="duotone" /><div className="stat-value">{data.stats.completedMissions}</div><p className="page-subtitle">Completed missions</p></article>
+      </div>
+
+      <div className="grid-two">
+        <article className="panel page-stack" data-testid="dashboard-notifications-card">
+          <div className="chip-row"><span className="chip"><BellRinging size={14} weight="duotone" /> Notifications</span></div>
+          <h3 className="section-title">Unread and live presence.</h3>
+          <p className="page-subtitle" data-testid="dashboard-unread-copy">
+            {notifications.unreadMessages > 0 ? `You have ${notifications.unreadMessages} unread message${notifications.unreadMessages > 1 ? 's' : ''} waiting.` : 'Everything is caught up right now.'}
+          </p>
+          {notifications.partnerPresence && (
+            <div className="presence-row" data-testid="dashboard-partner-presence-row">
+              <span className={`presence-dot ${notifications.partnerPresence.isOnline ? 'online' : 'offline'}`} />
+              <strong>{notifications.partnerPresence.name}</strong>
+              <span>{notifications.partnerPresence.label}</span>
+            </div>
+          )}
+        </article>
+
+        <article className="panel page-stack" data-testid="dashboard-latest-unread-card">
+          <div className="chip-row"><span className="chip"><DotOutline size={14} weight="duotone" /> Latest unread</span></div>
+          <h3 className="section-title">{notifications.latestUnread?.userName || 'The room is quiet.'}</h3>
+          <p className="page-subtitle" data-testid="dashboard-latest-unread-copy">{notifications.latestUnread?.content || 'When a new message lands, you’ll see it here with partner presence alongside it.'}</p>
+        </article>
       </div>
 
       <div className="split-layout">

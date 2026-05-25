@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import Depends, Header, HTTPException
 from passlib.context import CryptContext
 
-from db import collection, serialize
+from db import collection, serialize, utc_now
 
 load_dotenv()
 
@@ -46,6 +46,9 @@ def get_current_user(authorization: str | None = Header(default=None)) -> dict[s
     user = collection("users").find_one({"id": payload["userId"]}, {"_id": 0, "passwordHash": 0})
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
+    now = utc_now()
+    collection("users").update_one({"id": payload["userId"]}, {"$set": {"lastActiveAt": now}})
+    user["lastActiveAt"] = now
     return serialize(user)
 
 

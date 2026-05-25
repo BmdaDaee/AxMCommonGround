@@ -55,9 +55,11 @@ def serialize_many(documents: list[dict]) -> list[dict]:
 
 def ensure_indexes() -> None:
     collection("users").create_index([("email", ASCENDING)], unique=True)
+    collection("users").create_index([("lastActiveAt", DESCENDING)])
     collection("invite_codes").create_index([("code", ASCENDING)], unique=True)
     collection("pairs").create_index([("userIds", ASCENDING)])
     collection("messages").create_index([("pairId", ASCENDING), ("createdAt", DESCENDING)])
+    collection("messages").create_index([("pairId", ASCENDING), ("readBy", ASCENDING)])
     collection("bently_entries").create_index([("sessionId", ASCENDING), ("createdAt", DESCENDING)])
     collection("journal_entries").create_index([("pairId", ASCENDING), ("createdAt", DESCENDING)])
     collection("missions").create_index([("pairId", ASCENDING), ("createdAt", DESCENDING)])

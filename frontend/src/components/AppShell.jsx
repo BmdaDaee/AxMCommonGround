@@ -1,6 +1,8 @@
+import { useQuery } from '@tanstack/react-query';
 import { House, ChatsTeardrop, Sparkle, Notebook, Target, CalendarDots, Archive, Gear, SignOut } from '@phosphor-icons/react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { api } from '../lib/api';
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: House },
@@ -16,6 +18,13 @@ const navItems = [
 export default function AppShell({ user, onLogout }) {
   const location = useLocation();
   const immersive = ['/invite', '/join'].includes(location.pathname);
+  const notificationsQuery = useQuery({
+    queryKey: ['notifications-summary'],
+    queryFn: () => api('/notifications/summary'),
+    refetchInterval: 12000,
+    retry: false,
+  });
+  const notifications = notificationsQuery.data;
 
   return (
     <div className="shell-root">
@@ -41,6 +50,9 @@ export default function AppShell({ user, onLogout }) {
               >
                 <Icon size={18} weight="duotone" />
                 <span>{label}</span>
+                {label === 'Messages' && Boolean(notifications?.unreadMessages) && (
+                  <span className="nav-badge" data-testid="messages-unread-badge">{notifications.unreadMessages}</span>
+                )}
               </NavLink>
             ))}
           </nav>
@@ -66,7 +78,15 @@ export default function AppShell({ user, onLogout }) {
             <p className="topbar-copy" data-testid="topbar-user-greeting">Welcome back, {user?.name?.split(' ')[0] || 'friend'}.</p>
           </div>
           {!immersive && (
-            <div className="topbar-chip" data-testid="install-pwa-copy">Installable PWA ready</div>
+            <div className="topbar-actions">
+              {notifications?.partnerPresence && (
+                <div className="presence-chip" data-testid="partner-presence-chip">
+                  <span className={`presence-dot ${notifications.partnerPresence.isOnline ? 'online' : 'offline'}`} />
+                  <span>{notifications.partnerPresence.name} · {notifications.partnerPresence.label}</span>
+                </div>
+              )}
+              <div className="topbar-chip" data-testid="install-pwa-copy">Installable PWA ready</div>
+            </div>
           )}
         </header>
 
@@ -90,6 +110,9 @@ export default function AppShell({ user, onLogout }) {
               >
                 <Icon size={18} weight="duotone" />
                 <span>{label}</span>
+                {label === 'Messages' && Boolean(notifications?.unreadMessages) && (
+                  <span className="nav-badge mobile" data-testid="mobile-messages-unread-badge">{notifications.unreadMessages}</span>
+                )}
               </NavLink>
             ))}
           </nav>

@@ -1,359 +1,74 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-  View,
-  TextInput,
-  TouchableOpacity,
-  Text,
-  StyleSheet,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
-import { useRouter } from 'expo-router';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import * as Haptics from 'expo-haptics';
 import { trpc } from '../../src/lib/trpc';
-
-type Msg = { role: 'user' | 'bently'; content: string; error?: boolean };
+import { AppScreen, ActionButton, GlassCard, StatePill, sharedStyles } from '../../src/ui/primitives';
 
 export default function BentlyScreen() {
-  const router = useRouter();
+  const queryClient = useQueryClient();
   const [input, setInput] = useState('');
-  const [messages, setMessages] = useState<Msg[]>([]);
-  const [sending, setSending] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
+  const historyQuery = trpc.bently.history.useQuery();
   const coachSoloMutation = trpc.bently.coachSolo.useMutation();
+  const entries = useMemo(() => (historyQuery.data?.items || []).map((entry: any) => ({ ...entry, role: entry.author === 'bently' ? 'bently' : 'user' })), [historyQuery.data?.items]);
 
   const handleSend = async () => {
     const text = input.trim();
-    if (!text || sending) return;
+    if (!text || coachSoloMutation.isPending) return;
 
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setInput('');
-    setMessages((prev) => [...prev, { role: 'user', content: text }]);
-    setSending(true);
-
     try {
-      const result = await coachSoloMutation.mutateAsync({
-        message: text,
-        provider: 'groq',
-      });
-      setMessages((prev) => [
-        ...prev,
-        { role: 'bently', content: result.response },
-      ]);
+      await coachSoloMutation.mutateAsync({ message: text });
+      setInput('');
+      historyQuery.refetch();
+      queryClient.invalidateQueries({ queryKey: ['mobile-dashboard'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'bently',
-          content: "Something dropped between us. Try again when you're ready.",
-          error: true,
-        },
-      ]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-    } finally {
-      setSending(false);
     }
   };
 
-  useEffect(() => {
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
-  }, [messages, sending]);
-
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      style={styles.container}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
-    >
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => {
-            Haptics.selectionAsync();
-            router.back();
-          }}
-          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-        >
-          <Text style={styles.backLink}>← Back</Text>
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerEyebrow}>SOLO</Text>
-          <Text style={styles.headerTitle}>Bently</Text>
-        </View>
-        <View style={{ width: 50 }} />
-      </View>
+    <AppScreen eyebrow="AI mediator" title="Let Bently read the middle, not just the message." subtitle="This thread stays with you. Bently answers as a relational mediator: warm, direct, and state-aware.">
+      <GlassCard>
+        <StatePill state={coachSoloMutation.data?.state || 'DORMANT'} />
+        <Text style={styles.helperTitle}>Solo conversation</Text>
+        <Text style={sharedStyles.helper}>When you bring a question here, Bently speaks to the pattern and the pressure instead of picking a side.</Text>
+      </GlassCard>
 
-      {/* Messages */}
-      <ScrollView
-        ref={scrollRef}
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        {messages.length === 0 && (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyEyebrow}>SOLO CONVERSATION</Text>
-            <Text style={styles.emptyTitle}>One-to-one.</Text>
-            <View style={styles.emptyDivider} />
-            <Text style={styles.emptyBody}>
-              This is yours alone. Your partner can't see this thread.
-              {'\n\n'}
-              Bently sits with you here — not as a coach, not as therapy.
-              Just a presence that can hold what you bring without taking sides.
-              {'\n\n'}
-              Start anywhere.
-            </Text>
-          </View>
-        )}
-
-        {messages.map((msg, idx) => (
-          <View
-            key={idx}
-            style={[
-              styles.messageRow,
-              msg.role === 'user' ? styles.userRow : styles.bentlyRow,
-            ]}
-          >
-            {msg.role === 'bently' && (
-              <Text style={styles.senderLabel}>BENTLY</Text>
-            )}
-            <View
-              style={[
-                styles.bubble,
-                msg.role === 'user' ? styles.userBubble : styles.bentlyBubble,
-                msg.error && styles.errorBubble,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.bubbleText,
-                  msg.role === 'user' && styles.userBubbleText,
-                ]}
-              >
-                {msg.content}
-              </Text>
-            </View>
-          </View>
-        ))}
-
-        {sending && (
-          <View style={[styles.messageRow, styles.bentlyRow]}>
-            <Text style={styles.senderLabel}>BENTLY</Text>
-            <View style={[styles.bubble, styles.bentlyBubble, styles.typingBubble]}>
-              <View style={styles.typingDots}>
-                <View style={styles.dot} />
-                <View style={styles.dot} />
-                <View style={styles.dot} />
+      <GlassCard>
+        <View style={styles.threadWrap}>
+          {entries.length === 0 && <Text style={sharedStyles.helper}>Start anywhere: “We keep missing each other when stress is high.”</Text>}
+          {entries.map((entry: any, idx: number) => (
+            <View key={`${entry.createdAt}-${idx}`} style={[styles.messageRow, entry.role === 'user' ? styles.userRow : styles.bentlyRow]}>
+              {entry.role === 'bently' && <Text style={styles.senderLabel}>BENTLY</Text>}
+              <View style={[styles.bubble, entry.role === 'user' ? styles.userBubble : styles.bentlyBubble]}>
+                <Text style={[styles.bubbleText, entry.role === 'user' ? styles.userText : null]}>{entry.content}</Text>
               </View>
             </View>
-          </View>
-        )}
-      </ScrollView>
+          ))}
+          {coachSoloMutation.isPending && <ActivityIndicator size="small" color="#2C3B2E" />}
+        </View>
+      </GlassCard>
 
-      {/* Input */}
-      <View style={styles.inputBar}>
-        <TextInput
-          style={styles.input}
-          placeholder="Say what's on your mind…"
-          placeholderTextColor="#555"
-          value={input}
-          onChangeText={setInput}
-          editable={!sending}
-          multiline
-          maxLength={2000}
-        />
-        <TouchableOpacity
-          style={[
-            styles.sendButton,
-            (!input.trim() || sending) && styles.sendButtonDisabled,
-          ]}
-          onPress={handleSend}
-          disabled={!input.trim() || sending}
-        >
-          {sending ? (
-            <ActivityIndicator size="small" color="#080808" />
-          ) : (
-            <Text style={styles.sendButtonText}>Send</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+      <GlassCard>
+        <TextInput style={[sharedStyles.field, sharedStyles.textarea]} placeholder="Describe what feels true between you two right now." placeholderTextColor="#7D867B" value={input} onChangeText={setInput} multiline maxLength={2000} />
+        <ActionButton label={coachSoloMutation.isPending ? 'Bently is thinking…' : 'Ask Bently'} onPress={handleSend} disabled={!input.trim() || coachSoloMutation.isPending} />
+      </GlassCard>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#080808',
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingTop: 56,
-    paddingBottom: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1a1a1a',
-  },
-  backLink: {
-    color: '#888',
-    fontSize: 14,
-    letterSpacing: 0.3,
-  },
-  headerCenter: {
-    alignItems: 'center',
-  },
-  headerEyebrow: {
-    color: '#666',
-    fontSize: 9,
-    letterSpacing: 3,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  headerTitle: {
-    color: '#D4AF37',
-    fontSize: 18,
-    fontWeight: '300',
-    letterSpacing: -0.3,
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-  },
-  emptyState: {
-    paddingTop: 80,
-    paddingHorizontal: 8,
-  },
-  emptyEyebrow: {
-    color: '#666',
-    fontSize: 11,
-    letterSpacing: 3,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  emptyTitle: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '300',
-    letterSpacing: -0.5,
-    marginBottom: 16,
-  },
-  emptyDivider: {
-    width: 40,
-    height: 1,
-    backgroundColor: '#D4AF37',
-    marginBottom: 20,
-  },
-  emptyBody: {
-    color: '#aaa',
-    fontSize: 15,
-    lineHeight: 24,
-    fontWeight: '300',
-  },
-  messageRow: {
-    marginBottom: 20,
-  },
-  userRow: {
-    alignItems: 'flex-end',
-  },
-  bentlyRow: {
-    alignItems: 'flex-start',
-  },
-  senderLabel: {
-    color: '#666',
-    fontSize: 10,
-    letterSpacing: 3,
-    fontWeight: '600',
-    marginBottom: 6,
-    marginLeft: 4,
-  },
-  bubble: {
-    padding: 14,
-    borderRadius: 12,
-    maxWidth: '85%',
-  },
-  userBubble: {
-    backgroundColor: '#D4AF37',
-    borderBottomRightRadius: 4,
-  },
-  bentlyBubble: {
-    backgroundColor: '#161616',
-    borderWidth: 1,
-    borderColor: '#222',
-    borderBottomLeftRadius: 4,
-  },
-  errorBubble: {
-    borderColor: '#5a1f1f',
-    backgroundColor: '#1a0e0e',
-  },
-  bubbleText: {
-    color: '#e8e8e8',
-    fontSize: 15,
-    lineHeight: 22,
-    fontWeight: '300',
-  },
-  userBubbleText: {
-    color: '#080808',
-    fontWeight: '400',
-  },
-  typingBubble: {
-    paddingVertical: 16,
-  },
-  typingDots: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#D4AF37',
-    opacity: 0.6,
-  },
-  inputBar: {
-    flexDirection: 'row',
-    padding: 16,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
-    borderTopWidth: 1,
-    borderTopColor: '#1a1a1a',
-    gap: 8,
-    backgroundColor: '#080808',
-  },
-  input: {
-    flex: 1,
-    backgroundColor: '#111',
-    color: '#fff',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#222',
-    fontSize: 15,
-    maxHeight: 120,
-    fontWeight: '300',
-  },
-  sendButton: {
-    backgroundColor: '#D4AF37',
-    paddingHorizontal: 18,
-    borderRadius: 8,
-    justifyContent: 'center',
-    minWidth: 70,
-    alignItems: 'center',
-  },
-  sendButtonDisabled: {
-    opacity: 0.4,
-  },
-  sendButtonText: {
-    color: '#080808',
-    fontWeight: '600',
-    fontSize: 14,
-    letterSpacing: 0.3,
-  },
+  helperTitle: { color: '#172117', fontSize: 26, fontFamily: 'serif' },
+  threadWrap: { gap: 14 },
+  messageRow: { gap: 6 },
+  userRow: { alignItems: 'flex-end' },
+  bentlyRow: { alignItems: 'flex-start' },
+  senderLabel: { color: '#617160', fontSize: 11, letterSpacing: 2.2, textTransform: 'uppercase' },
+  bubble: { borderRadius: 24, paddingHorizontal: 15, paddingVertical: 13, maxWidth: '86%' },
+  userBubble: { backgroundColor: '#2C3B2E' },
+  bentlyBubble: { backgroundColor: 'rgba(255,255,255,0.82)', borderWidth: 1, borderColor: '#E4DDD2' },
+  bubbleText: { color: '#172117', fontSize: 15, lineHeight: 22 },
+  userText: { color: '#fff' },
 });

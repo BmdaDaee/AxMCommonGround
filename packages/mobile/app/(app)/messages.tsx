@@ -1,171 +1,71 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import { useMemo, useState } from 'react';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { useQueryClient } from '@tanstack/react-query';
 import { trpc } from '../../src/lib/trpc';
+import { AppScreen, ActionButton, GlassCard, PresenceChip, sharedStyles } from '../../src/ui/primitives';
 
 export default function MessagesScreen() {
+  const queryClient = useQueryClient();
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Array<{ role: string; content: string; sender?: string }>>([]);
-  const [loading, setLoading] = useState(false);
-  const scrollRef = useRef<ScrollView>(null);
   const sendMessageMutation = trpc.messages.sendMessage.useMutation();
-  const getMessagesQuery = trpc.messages.getMessages.useQuery({ pairId: 'current' });
-
-  useEffect(() => {
-    if (getMessagesQuery.data) {
-      setMessages(getMessagesQuery.data.map(msg => ({
-        role: msg.senderId === 'currentUser' ? 'user' : 'partner',
-        content: msg.content,
-        sender: msg.senderName,
-      })));
-    }
-  }, [getMessagesQuery.data]);
+  const messagesQuery = trpc.messages.getMessages.useQuery();
+  const meQuery = trpc.auth.me.useQuery();
+  const items = useMemo(() => messagesQuery.data?.items || [], [messagesQuery.data?.items]);
 
   const handleSendMessage = async () => {
     if (!message.trim()) return;
 
-    const userMessage = message;
-    setMessage('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setLoading(true);
-
     try {
-      await sendMessageMutation.mutateAsync({
-        pairId: 'current',
-        content: userMessage,
-      });
-
-      // Refetch messages
-      getMessagesQuery.refetch();
+      await sendMessageMutation.mutateAsync({ content: message.trim() });
+      setMessage('');
+      messagesQuery.refetch();
+      queryClient.invalidateQueries({ queryKey: ['mobile-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['mobile-notifications'] });
     } catch (error) {
       console.error('Error:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    scrollRef.current?.scrollToEnd({ animated: true });
-  }, [messages]);
+  if (!messagesQuery.data?.pair) {
+    return <AppScreen eyebrow="Direct thread" title="Messages unlock after pairing." subtitle="Invite your partner first, then your shared conversation thread becomes active." />;
+  }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
-    >
-      <View style={styles.header}>
-        <Text style={styles.title}>Messages</Text>
-      </View>
+    <AppScreen eyebrow="Direct thread" title="Speak without leaving the room." subtitle="Unread and presence now sync directly into mobile as well.">
+      <GlassCard>
+        <PresenceChip presence={messagesQuery.data?.partnerPresence} />
+        <View style={styles.threadWrap}>
+          {items.map((msg: any) => {
+            const self = msg.senderId === meQuery.data?.user?.id;
+            return (
+              <View key={msg.id} style={[styles.messageWrap, self ? styles.selfWrap : styles.partnerWrap]}>
+                {!self && <Text style={styles.senderName}>{msg.senderName}</Text>}
+                <View style={[styles.messageBubble, self ? styles.selfBubble : styles.partnerBubble]}>
+                  <Text style={[styles.messageText, self ? styles.selfText : null]}>{msg.content}</Text>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </GlassCard>
 
-      <ScrollView ref={scrollRef} style={styles.messagesContainer}>
-        {messages.map((msg, idx) => (
-          <View
-            key={idx}
-            style={[
-              styles.messageBubble,
-              msg.role === 'user' ? styles.userMessage : styles.partnerMessage,
-            ]}
-          >
-            {msg.role === 'partner' && msg.sender && (
-              <Text style={styles.senderName}>{msg.sender}</Text>
-            )}
-            <Text style={styles.messageText}>{msg.content}</Text>
-          </View>
-        ))}
-      </ScrollView>
-
-      <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          placeholder="Type a message..."
-          placeholderTextColor="#666"
-          value={message}
-          onChangeText={setMessage}
-          editable={!loading}
-          multiline
-        />
-        <TouchableOpacity
-          style={[styles.sendButton, loading && styles.sendButtonDisabled]}
-          onPress={handleSendMessage}
-          disabled={loading}
-        >
-          <Text style={styles.sendButtonText}>Send</Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+      <GlassCard>
+        <TextInput style={[sharedStyles.field, sharedStyles.textarea]} placeholder="Say what is true, not what only sounds safe." placeholderTextColor="#7D867B" value={message} onChangeText={setMessage} multiline />
+        <ActionButton label={sendMessageMutation.isPending ? 'Sending…' : 'Send message'} onPress={handleSendMessage} disabled={!message.trim() || sendMessageMutation.isPending} />
+      </GlassCard>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#080808',
-  },
-  header: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#222',
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#D4AF37',
-  },
-  messagesContainer: {
-    flex: 1,
-    padding: 15,
-  },
-  messageBubble: {
-    marginVertical: 8,
-    padding: 12,
-    borderRadius: 8,
-    maxWidth: '85%',
-  },
-  userMessage: {
-    alignSelf: 'flex-end',
-    backgroundColor: '#D4AF37',
-  },
-  partnerMessage: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#222',
-  },
-  senderName: {
-    color: '#999',
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  messageText: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    padding: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#222',
-    gap: 10,
-  },
-  input: {
-    flex: 1,
-    backgroundColor: '#111',
-    color: '#fff',
-    padding: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#333',
-    maxHeight: 100,
-  },
-  sendButton: {
-    backgroundColor: '#D4AF37',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    justifyContent: 'center',
-  },
-  sendButtonDisabled: {
-    opacity: 0.6,
-  },
-  sendButtonText: {
-    color: '#080808',
-    fontWeight: 'bold',
-  },
+  threadWrap: { gap: 14 },
+  messageWrap: { gap: 6 },
+  selfWrap: { alignItems: 'flex-end' },
+  partnerWrap: { alignItems: 'flex-start' },
+  senderName: { color: '#617160', fontSize: 11, letterSpacing: 2.2, textTransform: 'uppercase' },
+  messageBubble: { maxWidth: '86%', borderRadius: 24, paddingHorizontal: 15, paddingVertical: 13 },
+  selfBubble: { backgroundColor: '#2C3B2E' },
+  partnerBubble: { backgroundColor: 'rgba(255,255,255,0.78)', borderWidth: 1, borderColor: '#E4DDD2' },
+  messageText: { color: '#172117', fontSize: 15, lineHeight: 22 },
+  selfText: { color: '#fff' },
 });

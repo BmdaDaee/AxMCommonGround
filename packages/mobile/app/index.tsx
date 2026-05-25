@@ -1,147 +1,57 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { ImageBackground, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as SecureStore from 'expo-secure-store';
-import { View, Text, TouchableOpacity, StyleSheet, Animated } from 'react-native';
+import { AppScreen, ActionButton, GlassCard, sharedStyles } from '../src/ui/primitives';
+import { getToken } from '../src/lib/auth';
+
+const heroImage = 'https://images.unsplash.com/photo-1543829969-57899edf981b?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzN8MHwxfHNlYXJjaHwyfHxjb3VwbGUlMjBob2xkaW5nJTIwaGFuZHMlMjBzdW5zZXR8ZW58MHx8fHwxNzc5NjYxMzEwfDA&ixlib=rb-4.1.0&q=85';
 
 export default function Index() {
   const router = useRouter();
-  const [checked, setChecked] = useState(false);
-  const [hasToken, setHasToken] = useState(false);
-  const fadeAnim = useState(new Animated.Value(0))[0];
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = await SecureStore.getItemAsync('authToken');
-      if (token) {
-        // Authenticated — go straight to dashboard
-        router.replace('/(app)/dashboard');
-      } else {
-        // First-time / logged-out — show welcome
-        setHasToken(false);
-        setChecked(true);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }).start();
-      }
-    };
-    checkAuth();
-  }, []);
-
-  if (!checked) {
-    return <View style={styles.container} />;
-  }
+    (async () => {
+      const token = await getToken();
+      if (token) router.replace('/(app)/dashboard');
+    })();
+  }, [router]);
 
   return (
-    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
-      <View style={styles.content}>
-        <Text style={styles.brandSmall}>AxM</Text>
-        <Text style={styles.brand}>CommonGround</Text>
-        <View style={styles.divider} />
-        <Text style={styles.tagline}>A third presence for two people.</Text>
+    <AppScreen
+      hideNav
+      eyebrow="Relationship operating system"
+      title="Bring two people back to the middle."
+      subtitle="The mobile experience now mirrors the editorial warmth of the new PWA — pairing, messages, Bently, vault memories, and live relational signals all in one place."
+    >
+      <ImageBackground source={{ uri: heroImage }} style={styles.heroImage} imageStyle={styles.heroImageInner}>
+        <View style={styles.heroOverlay}>
+          <Text style={styles.heroEyebrow}>Mobile-first CommonGround</Text>
+          <Text style={styles.heroTitle}>A premium shared space that feels calm, soft, and intentional.</Text>
+        </View>
+      </ImageBackground>
 
-        <View style={styles.spacer} />
+      <GlassCard>
+        <Text style={styles.cardTitle}>What’s inside</Text>
+        <View style={styles.listWrap}>
+          <Text style={sharedStyles.helper}>Invite your partner, read the relationship weather, talk directly, let Bently hold the middle, and keep important memories in the vault.</Text>
+        </View>
+      </GlassCard>
 
-        <Text style={styles.body}>
-          You and your partner share this space.{'\n'}
-          Bently holds the middle — not as a coach,{'\n'}
-          not as a chatbot, but as a mediator{'\n'}
-          who never takes sides.
-        </Text>
-
-        <View style={styles.spacer} />
+      <View style={styles.actions}>
+        <ActionButton label="Create account" onPress={() => router.push('/(auth)/signup')} testID="mobile-start-signup-button" />
+        <ActionButton label="I already have an account" variant="secondary" onPress={() => router.push('/(auth)/login')} testID="mobile-start-login-button" />
       </View>
-
-      <View style={styles.footer}>
-        <TouchableOpacity
-          style={styles.primaryButton}
-          onPress={() => router.push('/(auth)/signup')}
-        >
-          <Text style={styles.primaryButtonText}>Begin</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={() => router.push('/(auth)/login')}
-        >
-          <Text style={styles.secondaryButtonText}>I already have an account</Text>
-        </TouchableOpacity>
-      </View>
-    </Animated.View>
+    </AppScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#080808',
-    paddingHorizontal: 32,
-    paddingTop: 96,
-    paddingBottom: 48,
-    justifyContent: 'space-between',
-  },
-  content: {
-    alignItems: 'flex-start',
-  },
-  brandSmall: {
-    color: '#666',
-    fontSize: 11,
-    letterSpacing: 4,
-    fontWeight: '600',
-    marginBottom: 6,
-  },
-  brand: {
-    color: '#D4AF37',
-    fontSize: 36,
-    fontWeight: '300',
-    letterSpacing: -0.5,
-    marginBottom: 16,
-  },
-  divider: {
-    width: 40,
-    height: 1,
-    backgroundColor: '#D4AF37',
-    marginBottom: 16,
-  },
-  tagline: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '300',
-    fontStyle: 'italic',
-    lineHeight: 26,
-  },
-  spacer: {
-    height: 32,
-  },
-  body: {
-    color: '#aaa',
-    fontSize: 15,
-    lineHeight: 24,
-    fontWeight: '300',
-  },
-  footer: {
-    gap: 12,
-  },
-  primaryButton: {
-    backgroundColor: '#D4AF37',
-    paddingVertical: 16,
-    borderRadius: 4,
-    alignItems: 'center',
-  },
-  primaryButtonText: {
-    color: '#080808',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  secondaryButton: {
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  secondaryButtonText: {
-    color: '#888',
-    fontSize: 14,
-    letterSpacing: 0.3,
-  },
+  heroImage: { minHeight: 320, borderRadius: 30, overflow: 'hidden', justifyContent: 'flex-end' },
+  heroImageInner: { borderRadius: 30 },
+  heroOverlay: { padding: 22, backgroundColor: 'rgba(23,33,23,0.28)' },
+  heroEyebrow: { color: '#F8F4EC', fontSize: 11, letterSpacing: 2.4, textTransform: 'uppercase', marginBottom: 10 },
+  heroTitle: { color: '#fff', fontSize: 34, lineHeight: 36, fontFamily: 'serif' },
+  cardTitle: { color: '#172117', fontSize: 24, fontFamily: 'serif' },
+  listWrap: { gap: 10 },
+  actions: { gap: 12 },
 });

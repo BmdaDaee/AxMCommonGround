@@ -1,8 +1,7 @@
-// packages/mobile/src/lib/auth.ts
 import * as SecureStore from 'expo-secure-store';
 
-const TOKEN_KEY = 'auth_token';
-const USER_KEY = 'auth_user';
+const TOKEN_KEY = 'authToken';
+const USER_KEY = 'authUser';
 
 export async function getToken(): Promise<string | null> {
   return SecureStore.getItemAsync(TOKEN_KEY);
@@ -10,6 +9,10 @@ export async function getToken(): Promise<string | null> {
 
 export async function setToken(token: string): Promise<void> {
   await SecureStore.setItemAsync(TOKEN_KEY, token);
+}
+
+export async function clearToken(): Promise<void> {
+  await SecureStore.deleteItemAsync(TOKEN_KEY);
 }
 
 export async function getUser(): Promise<any | null> {
@@ -22,7 +25,7 @@ export async function setUser(user: any): Promise<void> {
 }
 
 export async function clearAuth(): Promise<void> {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await clearToken();
   await SecureStore.deleteItemAsync(USER_KEY);
 }
 
