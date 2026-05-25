@@ -3,7 +3,7 @@ from typing import Any
 
 import jwt
 from dotenv import load_dotenv
-from fastapi import Depends, Header, HTTPException
+from fastapi import Cookie, Depends, Header, HTTPException, Response
 from passlib.context import CryptContext
 
 from db import collection, serialize, utc_now
@@ -13,6 +13,9 @@ load_dotenv()
 JWT_SECRET = os.environ.get("JWT_SECRET")
 if not JWT_SECRET:
     raise RuntimeError("Missing JWT_SECRET")
+
+AUTH_COOKIE_NAME = "cg_session"
+AUTH_COOKIE_SECURE = os.environ.get("AUTH_COOKIE_SECURE") == "true"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -33,11 +36,32 @@ def decode_token(token: str) -> dict[str, Any]:
     return jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
 
 
-def get_current_user(authorization: str | None = Header(default=None)) -> dict[str, Any]:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Not authenticated")
+def set_auth_cookie(response: Response, token: str) -> None:
+    response.set_cookie(
+        key=AUTH_COOKIE_NAME,
+        value=token,
+        httponly=True,
+        secure=AUTH_COOKIE_SECURE,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,
+        path="/",
+    )
 
-    token = authorization.replace("Bearer ", "", 1)
+
+def clear_auth_cookie(response: Response) -> None:
+    response.delete_cookie(key=AUTH_COOKIE_NAME, path="/")
+
+
+def get_current_user(
+    authorization: str | None = Header(default=None),
+    auth_cookie: str | None = Cookie(default=None, alias=AUTH_COOKIE_NAME),
+) -> dict[str, Any]:
+    token = auth_cookie
+    if authorization and authorization.startswith("Bearer "):
+        token = authorization.replace("Bearer ", "", 1)
+
+    if not token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
     try:
         payload = decode_token(token)
     except jwt.PyJWTError as error:

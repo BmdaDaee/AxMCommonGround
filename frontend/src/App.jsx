@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { SpinnerGap } from '@phosphor-icons/react';
 import AppShell from './components/AppShell';
-import { api, session } from './lib/api';
+import { api } from './lib/api';
 import AuthPage from './pages/AuthPage';
 import ConnectPage from './pages/ConnectPage';
 import DashboardPage from './pages/DashboardPage';
@@ -27,59 +27,54 @@ function Protected({ authenticated, loading, children }) {
 }
 
 export default function App() {
-  const [token, setToken] = useState(session.getToken());
-  const [user, setUser] = useState(session.getUser());
+  const queryClient = useQueryClient();
 
   const meQuery = useQuery({
-    queryKey: ['me', token],
+    queryKey: ['me'],
     queryFn: () => api('/auth/me'),
-    enabled: Boolean(token),
     staleTime: 60_000,
     retry: false,
   });
 
-  useEffect(() => {
-    if (meQuery.isError) {
-      session.clear();
-      setToken('');
-      setUser(null);
-    }
-  }, [meQuery.isError]);
+  const currentUser = meQuery.data?.user || null;
+  const authenticated = Boolean(currentUser);
 
-  const currentUser = meQuery.data?.user || user;
+  const handleAuthSuccess = useCallback((data) => {
+    queryClient.setQueryData(['me'], { user: data.user });
+  }, [queryClient]);
+
+  const handleLogout = useCallback(async () => {
+    try {
+      await api('/auth/logout', { method: 'POST' });
+    } finally {
+      queryClient.setQueryData(['me'], null);
+      queryClient.removeQueries({ queryKey: ['notifications-summary'] });
+    }
+  }, [queryClient]);
 
   const authState = useMemo(
     () => ({
-      onAuthSuccess(data) {
-        session.set(data);
-        setToken(data.token);
-        setUser(data.user);
-      },
-      onLogout() {
-        session.clear();
-        setToken('');
-        setUser(null);
-      },
-      token,
+      onAuthSuccess: handleAuthSuccess,
+      onLogout: handleLogout,
       user: currentUser,
     }),
-    [token, currentUser],
+    [currentUser, handleAuthSuccess, handleLogout],
   );
 
   return (
     <Routes>
       <Route
         path="/login"
-        element={token ? <Navigate to="/dashboard" replace /> : <AuthPage mode="login" authState={authState} />}
+        element={authenticated ? <Navigate to="/dashboard" replace /> : <AuthPage mode="login" authState={authState} />}
       />
       <Route
         path="/signup"
-        element={token ? <Navigate to="/dashboard" replace /> : <AuthPage mode="signup" authState={authState} />}
+        element={authenticated ? <Navigate to="/dashboard" replace /> : <AuthPage mode="signup" authState={authState} />}
       />
 
       <Route
         element={
-          <Protected authenticated={Boolean(token)} loading={meQuery.isLoading}>
+          <Protected authenticated={authenticated} loading={meQuery.isLoading}>
             <AppShell user={currentUser} onLogout={authState.onLogout} />
           </Protected>
         }
@@ -97,7 +92,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Route>
 
-      <Route path="*" element={<Navigate to={token ? '/dashboard' : '/login'} replace />} />
+      <Route path="*" element={<Navigate to={authenticated ? '/dashboard' : '/login'} replace />} />
     </Routes>
   );
 }

@@ -1,26 +1,31 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Sparkle } from '@phosphor-icons/react';
 import { toast } from 'sonner';
 import { api } from '../lib/api';
 
+function mapHistoryEntry(entry, index) {
+  return {
+    id: entry.id || `${entry.createdAt || 'entry'}-${index}`,
+    role: entry.author === 'bently' ? 'ai' : 'user',
+    content: entry.content,
+  };
+}
+
 export default function BentlyPage({ user }) {
   const queryClient = useQueryClient();
   const [prompt, setPrompt] = useState('');
-  const [entries, setEntries] = useState([]);
   const historyQuery = useQuery({ queryKey: ['bently-history'], queryFn: () => api('/bently/history') });
-
-  useEffect(() => {
-    if (historyQuery.data?.items) setEntries(historyQuery.data.items.map((entry) => ({ id: entry.id || crypto.randomUUID(), role: entry.author === 'bently' ? 'ai' : 'user', content: entry.content })));
-  }, [historyQuery.data?.items]);
+  const entries = useMemo(() => (historyQuery.data?.items || []).map(mapHistoryEntry), [historyQuery.data?.items]);
 
   const bentlyMutation = useMutation({
     mutationFn: () => api('/bently', { method: 'POST', body: JSON.stringify({ message: prompt }) }),
     onSuccess: (data) => {
-      setEntries((current) => [...current, { id: crypto.randomUUID(), role: 'user', content: prompt }, { id: crypto.randomUUID(), role: 'ai', content: data.response, state: data.state, xp: data.xp, rank: data.rank }]);
       setPrompt('');
+      historyQuery.refetch();
       queryClient.invalidateQueries({ queryKey: ['bently-history'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.setQueryData(['bently-meta'], data);
     },
     onError: (error) => toast.error(error.message),
   });
@@ -48,7 +53,6 @@ export default function BentlyPage({ user }) {
               <div className="message-bubble">
                 <p className="eyebrow">{entry.role === 'user' ? 'You' : 'Bently'}</p>
                 <div data-testid={`bently-entry-content-${entry.id}`}>{entry.content}</div>
-                {entry.role === 'ai' && entry.state && <div className="message-meta" data-testid={`bently-entry-meta-${entry.id}`}>{entry.state} · {entry.rank} · {entry.xp} XP</div>}
               </div>
             </div>
           ))}

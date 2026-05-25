@@ -1,24 +1,64 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { api } from '../lib/api';
+
+function revokePreviewFiles(files) {
+  files.forEach((file) => {
+    if (file.previewUrl) {
+      URL.revokeObjectURL(file.previewUrl);
+    }
+  });
+}
+
+function buildPreviewFiles(fileList) {
+  return Array.from(fileList || []).map((file) => Object.assign(file, { previewUrl: URL.createObjectURL(file) }));
+}
+
+function PreviewGrid({ previews }) {
+  if (!previews.length) return null;
+
+  return (
+    <div className="vault-media-grid" data-testid="vault-upload-preview-grid">
+      {previews.map((preview) => (
+        <div className="vault-media-card" key={`${preview.name}-${preview.previewUrl}`} data-testid={`vault-preview-${preview.name}`}>
+          {String(preview.type || '').startsWith('audio/') ? <audio controls src={preview.previewUrl} data-testid={`vault-preview-audio-${preview.name}`} /> : <img src={preview.previewUrl} alt={preview.name} data-testid={`vault-preview-image-${preview.name}`} />}
+          <span>{preview.name}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function VaultEntryCard({ item }) {
+  return (
+    <article className="vault-card" data-testid={`vault-entry-${item.id}`}>
+      <div className="chip-row">
+        <span className="chip" data-testid={`vault-entry-kind-${item.id}`}>{item.kind}</span>
+        <span className="chip" data-testid={`vault-entry-date-${item.id}`}>{new Date(item.date).toLocaleDateString()}</span>
+      </div>
+      <h3 className="section-title" data-testid={`vault-entry-title-${item.id}`}>{item.title}</h3>
+      <p className="page-subtitle" data-testid={`vault-entry-description-${item.id}`}>{item.description}</p>
+      {item.createdByName && <p className="muted-copy" data-testid={`vault-entry-author-${item.id}`}>Added by {item.createdByName}</p>}
+      {Boolean(item.media?.length) && (
+        <div className="vault-media-grid" data-testid={`vault-entry-media-grid-${item.id}`}>
+          {item.media.map((media) => (
+            <div className="vault-media-card" key={media.id} data-testid={`vault-entry-media-${media.id}`}>
+              {String(media.contentType || '').startsWith('audio/') ? <audio controls src={media.url} data-testid={`vault-entry-audio-${media.id}`} /> : <img src={media.url} alt={media.name} data-testid={`vault-entry-image-${media.id}`} />}
+              <span>{media.name}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </article>
+  );
+}
 
 export default function VaultPage() {
   const queryClient = useQueryClient();
   const [form, setForm] = useState({ title: '', description: '', kind: 'MOMENT' });
   const [files, setFiles] = useState([]);
   const vaultQuery = useQuery({ queryKey: ['vault'], queryFn: () => api('/vault') });
-
-  useEffect(() => () => {
-    files.forEach((file) => {
-      if (file.previewUrl) URL.revokeObjectURL(file.previewUrl);
-    });
-  }, [files]);
-
-  const previews = useMemo(
-    () => files.map((file) => ({ ...file, previewUrl: file.previewUrl || URL.createObjectURL(file) })),
-    [files],
-  );
 
   const createMemory = useMutation({
     mutationFn: async () => {
@@ -30,6 +70,7 @@ export default function VaultPage() {
       return api('/vault', { method: 'POST', body });
     },
     onSuccess: () => {
+      revokePreviewFiles(files);
       setForm({ title: '', description: '', kind: 'MOMENT' });
       setFiles([]);
       queryClient.invalidateQueries({ queryKey: ['vault'] });
@@ -62,20 +103,14 @@ export default function VaultPage() {
               type="file"
               accept="image/*,audio/*"
               multiple
-              onChange={(event) => setFiles(Array.from(event.target.files || []).map((file) => Object.assign(file, { previewUrl: URL.createObjectURL(file) })))}
+              onChange={(event) => {
+                revokePreviewFiles(files);
+                setFiles(buildPreviewFiles(event.target.files));
+              }}
               data-testid="vault-file-input"
             />
           </label>
-          {previews.length > 0 && (
-            <div className="vault-media-grid" data-testid="vault-upload-preview-grid">
-              {previews.map((preview) => (
-                <div className="vault-media-card" key={`${preview.name}-${preview.previewUrl}`} data-testid={`vault-preview-${preview.name}`}>
-                  {String(preview.type || '').startsWith('audio/') ? <audio controls src={preview.previewUrl} data-testid={`vault-preview-audio-${preview.name}`} /> : <img src={preview.previewUrl} alt={preview.name} data-testid={`vault-preview-image-${preview.name}`} />}
-                  <span>{preview.name}</span>
-                </div>
-              ))}
-            </div>
-          )}
+          <PreviewGrid previews={files} />
           <button className="button button-primary" onClick={() => createMemory.mutate()} disabled={!form.title.trim() || createMemory.isPending || (!files.length && !form.description.trim())} data-testid="vault-save-button">
             {createMemory.isPending ? 'Saving…' : 'Save memory'}
           </button>
@@ -89,27 +124,7 @@ export default function VaultPage() {
       </div>
 
       <div className="grid-two">
-        {(vaultQuery.data?.items || []).map((item) => (
-          <article key={item.id} className="vault-card" data-testid={`vault-entry-${item.id}`}>
-            <div className="chip-row">
-              <span className="chip" data-testid={`vault-entry-kind-${item.id}`}>{item.kind}</span>
-              <span className="chip" data-testid={`vault-entry-date-${item.id}`}>{new Date(item.date).toLocaleDateString()}</span>
-            </div>
-            <h3 className="section-title" data-testid={`vault-entry-title-${item.id}`}>{item.title}</h3>
-            <p className="page-subtitle" data-testid={`vault-entry-description-${item.id}`}>{item.description}</p>
-            {item.createdByName && <p className="muted-copy" data-testid={`vault-entry-author-${item.id}`}>Added by {item.createdByName}</p>}
-            {Boolean(item.media?.length) && (
-              <div className="vault-media-grid" data-testid={`vault-entry-media-grid-${item.id}`}>
-                {item.media.map((media) => (
-                  <div className="vault-media-card" key={media.id} data-testid={`vault-entry-media-${media.id}`}>
-                    {String(media.contentType).startsWith('audio/') ? <audio controls src={media.url} data-testid={`vault-entry-audio-${media.id}`} /> : <img src={media.url} alt={media.name} data-testid={`vault-entry-image-${media.id}`} />}
-                    <span>{media.name}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </article>
-        ))}
+        {(vaultQuery.data?.items || []).map((item) => <VaultEntryCard key={item.id} item={item} />)}
       </div>
     </section>
   );

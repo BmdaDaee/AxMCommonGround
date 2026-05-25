@@ -5,11 +5,12 @@ from typing import Any
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, EmailStr, Field
 
 from ai_service import generate_bently_response
-from auth import CurrentUser, create_token, hash_password, verify_password
+from auth import CurrentUser, clear_auth_cookie, create_token, hash_password, set_auth_cookie, verify_password
 from db import collection, ensure_indexes, make_id, serialize, serialize_many, utc_now
 
 load_dotenv()
@@ -18,6 +19,14 @@ ensure_indexes()
 MEDIA_ROOT = Path("/app/backend/media")
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 ALLOWED_UPLOAD_PREFIXES = ("image/", "audio/")
+DEFAULT_RELATIONAL_METRICS = {"availability": 46, "alignment": 52, "activation": 34, "trust": 58}
+RELATIONAL_EXPLANATIONS = {
+    "ALIGNED": "There is motion in both directions. The conversation still has softness and momentum.",
+    "DORMANT": "Nothing feels broken, but the space is cooling. A gentle act of initiation would matter.",
+    "MISALIGNED": "You are both showing up, but not landing in the same meaning yet.",
+    "CAPACITY_BLOCKED": "At least one of you looks stretched thin. Smaller asks will travel farther right now.",
+    "TRUST_FRACTURED": "The channel needs visible repair, not just reassurance. Name the break and keep the next step concrete.",
+}
 
 app = FastAPI(title="CommonGround API")
 app.add_middleware(
@@ -105,6 +114,17 @@ def normalize_media(entry: dict[str, Any]) -> dict[str, Any]:
     return entry
 
 
+def sanitize_user_payload(user: dict[str, Any]) -> dict[str, Any]:
+    return serialize({key: value for key, value in user.items() if key != "passwordHash"})
+
+
+def build_auth_response(user: dict[str, Any]) -> JSONResponse:
+    token = create_token(user)
+    response = JSONResponse({"token": token, "user": sanitize_user_payload(user)})
+    set_auth_cookie(response, token)
+    return response
+
+
 def get_user_snapshot(user_id: str) -> dict[str, Any] | None:
     return serialize(collection("users").find_one({"id": user_id}, {"_id": 0, "passwordHash": 0}))
 
@@ -118,6 +138,7 @@ def build_presence(user: dict[str, Any] | None) -> dict[str, Any] | None:
     last_active_at = aware_from_iso(last_active) if isinstance(last_active, str) else last_active
     seconds_since = max(0, int((utc_now() - last_active_at).total_seconds()))
     is_online = seconds_since <= 180
+    label = "Away"
     if is_online:
         label = "Online now"
     elif seconds_since < 3600:
@@ -181,6 +202,144 @@ async def persist_uploads(files: list[UploadFile], pair_id: str) -> list[dict[st
     return saved
 
 
+def build_default_missions(pair_id: str, now: datetime) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": make_id(),
+            "pairId": pair_id,
+            "title": "Ten-minute emotional weather report",
+            "description": "Each of you shares one honest feeling, one friction point, and one request.",
+            "category": "Connection",
+            "xpReward": 80,
+            "completed": False,
+            "createdAt": now,
+            "dueAt": now + timedelta(days=3),
+        },
+        {
+            "id": make_id(),
+            "pairId": pair_id,
+            "title": "Repair one unfinished moment",
+            "description": "Name one small moment that still has static and close it gently.",
+            "category": "Repair",
+            "xpReward": 120,
+            "completed": False,
+            "createdAt": now,
+            "dueAt": now + timedelta(days=6),
+        },
+        {
+            "id": make_id(),
+            "pairId": pair_id,
+            "title": "Plan one protected hour together",
+            "description": "Choose a specific time this week and protect it from everything else.",
+            "category": "Rhythm",
+            "xpReward": 60,
+            "completed": False,
+            "createdAt": now,
+            "dueAt": now + timedelta(days=8),
+        },
+    ]
+
+
+def build_default_calendar_events(pair_id: str, now: datetime) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": make_id(),
+            "pairId": pair_id,
+            "title": "Weekly check-in",
+            "description": "Keep this hour soft and honest.",
+            "location": "Shared space",
+            "type": "CHECK_IN",
+            "startDate": now + timedelta(days=2),
+            "endDate": now + timedelta(days=2, hours=1),
+            "createdAt": now,
+        },
+        {
+            "id": make_id(),
+            "pairId": pair_id,
+            "title": "Next date ritual",
+            "description": "Do something low-pressure and intentionally fun.",
+            "location": "Out in the city",
+            "type": "DATE",
+            "startDate": now + timedelta(days=5),
+            "endDate": now + timedelta(days=5, hours=2),
+            "createdAt": now,
+        },
+    ]
+
+
+def build_default_vault_entries(pair_id: str, now: datetime) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": make_id(),
+            "pairId": pair_id,
+            "title": "Why we began",
+            "description": "A shared reminder of what felt true at the beginning.",
+            "kind": "LETTER",
+            "media": [],
+            "date": now,
+        },
+        {
+            "id": make_id(),
+            "pairId": pair_id,
+            "title": "The first real repair",
+            "description": "A marker for the moment you both chose understanding over distance.",
+            "kind": "MILESTONE",
+            "media": [],
+            "date": now - timedelta(days=2),
+        },
+    ]
+
+
+def seed_collection_if_empty(name: str, pair_id: str, documents: list[dict[str, Any]]) -> None:
+    target = collection(name)
+    if target.count_documents({"pairId": pair_id}) == 0:
+        target.insert_many(documents)
+
+
+def build_default_relational_payload() -> dict[str, Any]:
+    state = "DORMANT"
+    return {
+        "state": state,
+        "metrics": DEFAULT_RELATIONAL_METRICS.copy(),
+        "explanation": "The space is formed, but it is still waiting for regular contact to take shape.",
+    }
+
+
+def calculate_message_balance(messages: list[dict[str, Any]]) -> float:
+    counts: dict[str, int] = {}
+    for message in messages:
+        counts[message["userId"]] = counts.get(message["userId"], 0) + 1
+    values = list(counts.values()) or [1]
+    return min(values) / max(values) if len(values) > 1 else 0.55
+
+
+def calculate_relational_metrics(messages: list[dict[str, Any]], journals: list[dict[str, Any]], completed_missions: int) -> dict[str, int]:
+    recent_days = max(1, (utc_now() - aware_from_iso(messages[0]["createdAt"])).days + 1)
+    balance_ratio = calculate_message_balance(messages)
+    availability = max(18, 100 - (recent_days * 9))
+    alignment = min(95, int(45 + balance_ratio * 40 + len(journals) * 2))
+    activation = min(95, int(len(messages) * 4 + completed_missions * 10))
+    trust = min(96, int(50 + balance_ratio * 28 + len(journals) * 3 - recent_days * 2))
+    return {
+        "availability": availability,
+        "alignment": alignment,
+        "activation": activation,
+        "trust": trust,
+    }
+
+
+def determine_relational_state(metrics: dict[str, int]) -> str:
+    if metrics["trust"] < 40:
+        return "TRUST_FRACTURED"
+    if metrics["availability"] < 34:
+        return "CAPACITY_BLOCKED"
+    if metrics["alignment"] < 56:
+        return "MISALIGNED"
+    if metrics["activation"] < 42:
+        return "DORMANT"
+    return "ALIGNED"
+
+
 def get_pair_for_user(user_id: str) -> dict[str, Any] | None:
     return serialize(
         collection("pairs").find_one(
@@ -196,101 +355,10 @@ def get_partner(pair: dict[str, Any], user_id: str) -> dict[str, Any] | None:
 
 
 def ensure_pair_extras(pair: dict[str, Any]) -> None:
-    missions_collection = collection("missions")
-    if missions_collection.count_documents({"pairId": pair["id"]}) == 0:
-        now = utc_now()
-        missions_collection.insert_many(
-            [
-                {
-                    "id": make_id(),
-                    "pairId": pair["id"],
-                    "title": "Ten-minute emotional weather report",
-                    "description": "Each of you shares one honest feeling, one friction point, and one request.",
-                    "category": "Connection",
-                    "xpReward": 80,
-                    "completed": False,
-                    "createdAt": now,
-                    "dueAt": now + timedelta(days=3),
-                },
-                {
-                    "id": make_id(),
-                    "pairId": pair["id"],
-                    "title": "Repair one unfinished moment",
-                    "description": "Name one small moment that still has static and close it gently.",
-                    "category": "Repair",
-                    "xpReward": 120,
-                    "completed": False,
-                    "createdAt": now,
-                    "dueAt": now + timedelta(days=6),
-                },
-                {
-                    "id": make_id(),
-                    "pairId": pair["id"],
-                    "title": "Plan one protected hour together",
-                    "description": "Choose a specific time this week and protect it from everything else.",
-                    "category": "Rhythm",
-                    "xpReward": 60,
-                    "completed": False,
-                    "createdAt": now,
-                    "dueAt": now + timedelta(days=8),
-                },
-            ]
-        )
-
-    events_collection = collection("calendar_events")
-    if events_collection.count_documents({"pairId": pair["id"]}) == 0:
-        now = utc_now()
-        events_collection.insert_many(
-            [
-                {
-                    "id": make_id(),
-                    "pairId": pair["id"],
-                    "title": "Weekly check-in",
-                    "description": "Keep this hour soft and honest.",
-                    "location": "Shared space",
-                    "type": "CHECK_IN",
-                    "startDate": now + timedelta(days=2),
-                    "endDate": now + timedelta(days=2, hours=1),
-                    "createdAt": now,
-                },
-                {
-                    "id": make_id(),
-                    "pairId": pair["id"],
-                    "title": "Next date ritual",
-                    "description": "Do something low-pressure and intentionally fun.",
-                    "location": "Out in the city",
-                    "type": "DATE",
-                    "startDate": now + timedelta(days=5),
-                    "endDate": now + timedelta(days=5, hours=2),
-                    "createdAt": now,
-                },
-            ]
-        )
-
-    vault_collection = collection("vault_entries")
-    if vault_collection.count_documents({"pairId": pair["id"]}) == 0:
-        vault_collection.insert_many(
-            [
-                {
-                    "id": make_id(),
-                    "pairId": pair["id"],
-                    "title": "Why we began",
-                    "description": "A shared reminder of what felt true at the beginning.",
-                    "kind": "LETTER",
-                    "media": [],
-                    "date": utc_now(),
-                },
-                {
-                    "id": make_id(),
-                    "pairId": pair["id"],
-                    "title": "The first real repair",
-                    "description": "A marker for the moment you both chose understanding over distance.",
-                    "kind": "MILESTONE",
-                    "media": [],
-                    "date": utc_now() - timedelta(days=2),
-                },
-            ]
-        )
+    now = utc_now()
+    seed_collection_if_empty("missions", pair["id"], build_default_missions(pair["id"], now))
+    seed_collection_if_empty("calendar_events", pair["id"], build_default_calendar_events(pair["id"], now))
+    seed_collection_if_empty("vault_entries", pair["id"], build_default_vault_entries(pair["id"], now))
 
 
 def compute_relational_state(pair: dict[str, Any]) -> dict[str, Any]:
@@ -303,55 +371,19 @@ def compute_relational_state(pair: dict[str, Any]) -> dict[str, Any]:
     completed_missions = collection("missions").count_documents({"pairId": pair["id"], "completed": True})
 
     if not messages:
-        metrics = {"availability": 46, "alignment": 52, "activation": 34, "trust": 58}
-        state = "DORMANT"
-        explanation = "The space is formed, but it is still waiting for regular contact to take shape."
+        payload = build_default_relational_payload()
     else:
-        now = utc_now()
-        recent_days = max(1, (now - aware_from_iso(messages[0]["createdAt"])).days + 1)
-        counts = {}
-        for message in messages:
-            counts[message["userId"]] = counts.get(message["userId"], 0) + 1
-        values = list(counts.values()) or [1]
-        balance_ratio = min(values) / max(values) if len(values) > 1 else 0.55
-        availability = max(18, 100 - (recent_days * 9))
-        alignment = min(95, int(45 + balance_ratio * 40 + len(journals) * 2))
-        activation = min(95, int(len(messages) * 4 + completed_missions * 10))
-        trust = min(96, int(50 + balance_ratio * 28 + len(journals) * 3 - recent_days * 2))
-        metrics = {
-            "availability": availability,
-            "alignment": alignment,
-            "activation": activation,
-            "trust": trust,
-        }
-
-        if trust < 40:
-            state = "TRUST_FRACTURED"
-        elif availability < 34:
-            state = "CAPACITY_BLOCKED"
-        elif alignment < 56:
-            state = "MISALIGNED"
-        elif activation < 42:
-            state = "DORMANT"
-        else:
-            state = "ALIGNED"
-
-        explanation_map = {
-            "ALIGNED": "There is motion in both directions. The conversation still has softness and momentum.",
-            "DORMANT": "Nothing feels broken, but the space is cooling. A gentle act of initiation would matter.",
-            "MISALIGNED": "You are both showing up, but not landing in the same meaning yet.",
-            "CAPACITY_BLOCKED": "At least one of you looks stretched thin. Smaller asks will travel farther right now.",
-            "TRUST_FRACTURED": "The channel needs visible repair, not just reassurance. Name the break and keep the next step concrete.",
-        }
-        explanation = explanation_map[state]
+        metrics = calculate_relational_metrics(messages, journals, completed_missions)
+        state = determine_relational_state(metrics)
+        payload = {"state": state, "metrics": metrics, "explanation": RELATIONAL_EXPLANATIONS[state]}
 
     collection("pairs").update_one(
         {"id": pair["id"]},
-        {"$set": {"relationalState": state, "relationalMetrics": metrics, "updatedAt": utc_now()}},
+        {"$set": {"relationalState": payload["state"], "relationalMetrics": payload["metrics"], "updatedAt": utc_now()}},
     )
-    pair["relationalState"] = state
-    pair["relationalMetrics"] = metrics
-    return {"state": state, "metrics": metrics, "explanation": explanation}
+    pair["relationalState"] = payload["state"]
+    pair["relationalMetrics"] = payload["metrics"]
+    return payload
 
 
 def award_xp(user_id: str, amount: int) -> dict[str, Any]:
@@ -368,7 +400,7 @@ def health() -> dict[str, str]:
 
 
 @app.post("/api/auth/signup")
-def signup(body: SignupBody) -> dict[str, Any]:
+def signup(body: SignupBody) -> JSONResponse:
     if collection("users").find_one({"email": body.email.lower()}, {"_id": 0}):
         raise HTTPException(status_code=400, detail="An account with that email already exists")
 
@@ -391,15 +423,22 @@ def signup(body: SignupBody) -> dict[str, Any]:
             "theme": "Editorial Earth",
         }
     )
-    return {"token": create_token(user), "user": serialize({key: value for key, value in user.items() if key != "passwordHash"})}
+    return build_auth_response(user)
 
 
 @app.post("/api/auth/login")
-def login(body: LoginBody) -> dict[str, Any]:
+def login(body: LoginBody) -> JSONResponse:
     user = collection("users").find_one({"email": body.email.lower()}, {"_id": 0})
     if not user or not verify_password(body.password, user["passwordHash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
-    return {"token": create_token(user), "user": serialize({key: value for key, value in user.items() if key != "passwordHash"})}
+    return build_auth_response(user)
+
+
+@app.post("/api/auth/logout")
+def logout() -> JSONResponse:
+    response = JSONResponse({"success": True})
+    clear_auth_cookie(response)
+    return response
 
 
 @app.get("/api/auth/me")

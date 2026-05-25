@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ChatsCircle } from '@phosphor-icons/react';
 import { toast } from 'sonner';
@@ -20,14 +20,8 @@ export default function MessagesPage({ user }) {
   });
 
   const pair = messagesQuery.data?.pair;
-  const items = useMemo(() => messagesQuery.data?.items || [], [messagesQuery.data?.items]);
+  const items = messagesQuery.data?.items || [];
   const partnerPresence = messagesQuery.data?.partnerPresence;
-
-  useEffect(() => {
-    if (messagesQuery.data) {
-      queryClient.invalidateQueries({ queryKey: ['notifications-summary'] });
-    }
-  }, [messagesQuery.data, queryClient]);
 
   if (!pair) {
     return <section className="empty-card" data-testid="messages-empty-pair-card"><h3 className="section-title">Messages unlock after pairing.</h3><p className="page-subtitle">Invite your partner first, then this thread becomes your shared running conversation.</p></section>;

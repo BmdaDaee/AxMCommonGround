@@ -6,10 +6,11 @@ import { api } from '../lib/api';
 export default function SettingsPage({ authState }) {
   const settingsQuery = useQuery({ queryKey: ['settings'], queryFn: () => api('/settings') });
   const [form, setForm] = useState({ notifications: true, weeklyDigest: true, language: 'English', theme: 'Editorial Earth' });
+  const settings = settingsQuery.data?.settings;
 
   useEffect(() => {
-    if (settingsQuery.data?.settings) setForm(settingsQuery.data.settings);
-  }, [settingsQuery.data?.settings]);
+    if (settings) setForm(settings);
+  }, [settings]);
 
   const saveMutation = useMutation({
     mutationFn: () => api('/settings', { method: 'PUT', body: JSON.stringify(form) }),

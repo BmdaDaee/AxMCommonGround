@@ -6,6 +6,11 @@ import { motion } from 'framer-motion';
 import { api } from '../lib/api';
 
 const authBackdrop = 'https://static.prod-images.emergentagent.com/jobs/0c4a90ec-1e65-497e-9609-b972b267c41b/images/7a163b9b91ee484425f171196294773f662f29087864dc2e7057a0be48060565.png';
+const authPanelMotion = {
+  initial: { opacity: 0, y: 18 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.35 },
+};
 
 export default function AuthPage({ mode, authState }) {
   const navigate = useNavigate();
@@ -24,12 +29,7 @@ export default function AuthPage({ mode, authState }) {
 
   return (
     <div className="auth-layout">
-      <motion.section
-        className="auth-panel"
-        initial={{ opacity: 0, y: 18 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35 }}
-      >
+      <motion.section className="auth-panel" {...authPanelMotion}>
         <div className="page-stack">
           <p className="eyebrow" data-testid="auth-page-eyebrow">Installable PWA · native-feeling flow</p>
           <div className="auth-copy">

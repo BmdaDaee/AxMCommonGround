@@ -21,6 +21,57 @@ STATE_PROMPTS = {
 }
 
 
+def get_recent_history(session_id: str) -> list[dict]:
+    previous_entries = list(
+        collection("bently_entries")
+        .find({"sessionId": session_id}, {"_id": 0})
+        .sort("createdAt", -1)
+        .limit(6)
+    )
+    previous_entries.reverse()
+    return serialize_many(previous_entries)
+
+
+def build_transcript(history: list[dict]) -> str:
+    return "\n".join(f"{entry['author'].upper()}: {entry['content']}" for entry in history) or "No prior context."
+
+
+def build_system_message(state: str) -> str:
+    return (
+        "You are Bently, a relationship mediator for couples. "
+        "Be direct, warm, and observant. Never take sides. "
+        "Keep responses under 110 words. Avoid bullet points. "
+        f"Current relational state guidance: {STATE_PROMPTS.get(state, STATE_PROMPTS['DORMANT'])}"
+    )
+
+
+def build_prompt(pair_summary: str, transcript: str, message: str) -> str:
+    return (
+        f"Context: {pair_summary}\n"
+        f"History: {transcript[-900:]}\n"
+        f"Message: {message}"
+    )
+
+
+def store_bently_exchange(session_id: str, message: str, response: str) -> None:
+    collection("bently_entries").insert_many(
+        [
+            {
+                "sessionId": session_id,
+                "author": "user",
+                "content": message,
+                "createdAt": utc_now(),
+            },
+            {
+                "sessionId": session_id,
+                "author": "bently",
+                "content": response,
+                "createdAt": utc_now(),
+            },
+        ]
+    )
+
+
 def fallback_bently_response(message: str, state: str) -> str:
     guidance = {
         "ALIGNED": "Name what is already working before you ask for anything more.",
@@ -39,30 +90,10 @@ async def generate_bently_response(session_id: str, message: str, state: str, pa
     if not EMERGENT_LLM_KEY:
         raise RuntimeError("Missing EMERGENT_LLM_KEY")
 
-    previous_entries = list(
-        collection("bently_entries")
-        .find({"sessionId": session_id}, {"_id": 0})
-        .sort("createdAt", -1)
-        .limit(6)
-    )
-    previous_entries.reverse()
-    history = serialize_many(previous_entries)
-    transcript = "\n".join(
-        f"{entry['author'].upper()}: {entry['content']}" for entry in history
-    ) or "No prior context."
-
-    system_message = (
-        "You are Bently, a relationship mediator for couples. "
-        "Be direct, warm, and observant. Never take sides. "
-        "Keep responses under 110 words. Avoid bullet points. "
-        f"Current relational state guidance: {STATE_PROMPTS.get(state, STATE_PROMPTS['DORMANT'])}"
-    )
-
-    prompt = (
-        f"Context: {pair_summary}\n"
-        f"History: {transcript[-900:]}\n"
-        f"Message: {message}"
-    )
+    history = get_recent_history(session_id)
+    transcript = build_transcript(history)
+    system_message = build_system_message(state)
+    prompt = build_prompt(pair_summary, transcript, message)
 
     chat = LlmChat(
         api_key=EMERGENT_LLM_KEY,
@@ -75,21 +106,6 @@ async def generate_bently_response(session_id: str, message: str, state: str, pa
     except Exception:
         response = fallback_bently_response(message, state)
 
-    collection("bently_entries").insert_many(
-        [
-            {
-                "sessionId": session_id,
-                "author": "user",
-                "content": message,
-                "createdAt": utc_now(),
-            },
-            {
-                "sessionId": session_id,
-                "author": "bently",
-                "content": response,
-                "createdAt": utc_now(),
-            },
-        ]
-    )
+    store_bently_exchange(session_id, message, response)
 
     return response
