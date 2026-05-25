@@ -79,7 +79,7 @@ export default function ConnectPage({ mode }) {
 
   const invite = statusQuery.data?.invite;
   const pair = statusQuery.data?.pair;
-  const shouldCreateInvite = mode === 'invite' && !pair && !invite && !createInvite.isPending;
+  const shouldCreateInvite = mode === 'invite' && statusQuery.isSuccess && !pair && !invite && !createInvite.isPending;
 
   useEffect(() => {
     if (shouldCreateInvite) {

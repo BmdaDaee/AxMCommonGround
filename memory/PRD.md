@@ -46,3 +46,10 @@ The app is basiccaly at bmdadaee/axmcommonground and i need you to build everyth
 1. Add device-native media picking/upload inside Expo so mobile can attach local photos/audio directly
 2. Build mobile parity screens for journal, missions, and calendar
 3. Add push delivery for unread/presence notifications and richer notification preferences
+
+
+## Code review hardening (latest pass)
+- Replaced browser localStorage token/session handling with httpOnly cookie auth for the web app; added `/api/auth/logout` and preserved token responses for mobile compatibility.
+- Refactored `ensure_pair_extras`, `compute_relational_state`, and `generate_bently_response` into smaller helper-driven flows.
+- Refactored AppShell, Dashboard, Connect, Vault, and Bently pages into smaller sections/helpers and removed stale hook dependency risks.
+- Added backend regression coverage for cookie auth in `/app/backend/tests/test_auth_cookie_and_regressions.py`.
