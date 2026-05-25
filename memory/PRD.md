@@ -19,19 +19,21 @@ The app is basiccaly at bmdadaee/axmcommonground and i need you to build everyth
 
 ## What's implemented
 - Responsive editorial web app with login/signup, installable PWA manifest, immersive onboarding, premium dashboard, messages, Bently, journal, missions, calendar, vault, and settings pages
-- FastAPI backend endpoints for auth, invite creation, pair joining, dashboard state, messaging, AI coaching, journal entries, mission completion, calendar events, vault data, and user settings
-- Persistent relational-state engine that derives relationship weather from activity, balance, reflection, and ritual completion
-- Verified flows: auth, invite generation, join flow, dashboard, messages, Bently, journal, missions, calendar, and settings
-- Mobile source integration path updated so Expo app code targets the new REST backend contract
+- FastAPI backend endpoints for auth, invite creation, pair joining, dashboard state, messaging, unread notification summaries, partner presence, AI coaching, journal entries, mission completion, calendar events, vault data/media uploads, and user settings
+- Persistent relational-state engine that derives relationship weather from activity, balance, reflection, ritual completion, unread messages, and recent presence
+- Vault memories now support multipart media uploads stored locally and served back through `/api/media/*`; the web app renders uploaded media in the shared vault
+- Expo mobile UI was redesigned to visually align with the new web experience, with a new shared mobile shell, refreshed auth/onboarding, upgraded dashboard/messages/Bently screens, plus new mobile vault and settings screens
+- Verified flows: auth, invite generation, join flow, dashboard, unread notifications, partner presence, messages, Bently, vault media upload, journal, missions, calendar, and settings
+- Added backend regression coverage for notifications + vault media in `/app/backend/tests/test_notifications_vault_media.py`
 
 ## Prioritized backlog
 ### P0
-- Add richer mobile UI modernization across all Expo screens to match the new web design language
-- Add upload/media support for the Vault so shared memories can include images and audio
+- Add true device-side mobile media picking/upload so Expo can attach local photos/audio directly into Vault memories
 - Add pagination / lazy loading for long message and journal histories
+- Add richer mobile screen coverage for journal, missions, and calendar to reach full web/mobile parity
 
 ### P1
-- Add pair notifications, unread states, and background refresh for mobile/web
+- Add push notification delivery and background refresh for unread/presence on mobile/web
 - Add more nuanced relational analytics and trends across weeks/months
 - Add editable missions, recurring rituals, and milestone generation
 
@@ -41,6 +43,6 @@ The app is basiccaly at bmdadaee/axmcommonground and i need you to build everyth
 - Add dynamic code-splitting for frontend bundle optimization
 
 ## Next tasks
-1. Modernize the Expo UI layer screen-by-screen to visually match the new PWA
-2. Add media-rich shared memory uploads for DeeplyUs/Vault
-3. Add partner presence, unread states, and notification preferences
+1. Add device-native media picking/upload inside Expo so mobile can attach local photos/audio directly
+2. Build mobile parity screens for journal, missions, and calendar
+3. Add push delivery for unread/presence notifications and richer notification preferences
