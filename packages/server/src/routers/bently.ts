@@ -2,7 +2,7 @@
 // Defaults to Groq (free). Falls back to Claude on error if user specifies.
 
 import { z } from 'zod';
-import { router, publicProcedure } from '../trpc.js';
+import { router, publicProcedure, protectedProcedure } from '../trpc.js';
 import { TRPCError } from '@trpc/server'
 import { aiProviders } from '../services/ai/index.js';
 import { pairs, bentlyResponses, xpEvents, users } from '../db/schema.js';
@@ -10,12 +10,15 @@ import { eq, or, and } from 'drizzle-orm';
 import { XP_CONFIG } from '../../../shared/constants.js';
 import type { RelationalState } from '../../../shared/enums.js';
 
+type BentlyMode = 'SOLO' | 'COUPLE';
+
 // System prompt builder
 function buildBentlySystemPrompt(
   state: RelationalState,
   requestingUserId: string,
   partnerId: string,
   currentUserId: string,
+  mode: BentlyMode,
 ): string {
   const perspective = requestingUserId === currentUserId ? 'self' : 'partner';
 
@@ -26,6 +29,16 @@ You hold two truths at once when necessary: the stabilizing one and the destabil
 You never take sides. You never assign blame. You name patterns, not people.
 Keep responses under 200 words unless the situation requires more.
 Do not use bullet points. Speak in paragraphs.`;
+
+  const modeDirective = mode === 'SOLO'
+    ? `\nMODE: SOLO
+This conversation is private. The user's partner cannot see this thread and will never see it unless the
+user chooses to share something from it themselves. Do not reference this conversation as if the partner
+already knows about it. You can be more direct about doubts, fears, or things the user isn't ready to say
+in couple space — that privacy is the point.`
+    : `\nMODE: COUPLE
+Both partners are present or this response may be visible to both. Do not surface anything one partner told
+you in a SOLO conversation. Speak to the shared dynamic, not privileged information from either side.`;
 
   const stateDirectives: Record<RelationalState, string> = {
     ALIGNED: `
@@ -61,18 +74,19 @@ Name the rupture carefully. Validate that repair requires observable action, not
 Suggest one concrete, small, keepable commitment. Nothing grand.`,
   };
 
-  return `${basePrompt}\n${stateDirectives[state] ?? stateDirectives.DORMANT}`;
+  return `${basePrompt}\n${modeDirective}\n${stateDirectives[state] ?? stateDirectives.DORMANT}`;
 
 }
 
 // Router
 export const bentlyRouter = router({
 
-  // Main coach endpoint
-  coach: publicProcedure
+  // Main coach endpoint (in-pair, persisted, SOLO or COUPLE)
+  coach: protectedProcedure
     .input(z.object({
       pairId: z.string().uuid(),
       message: z.string().min(1).max(2000),
+      mode: z.enum(['SOLO', 'COUPLE']).default('COUPLE'),
       provider: z.enum(['groq', 'claude', 'venice']).default('groq'),
     }))
     .mutation(async ({ input, ctx }) => {
@@ -98,12 +112,13 @@ export const bentlyRouter = router({
       const partnerId = pair.user1Id === ctx.userId ? pair.user2Id : pair.user1Id;
       const relationalState = pair.relationalState as RelationalState;
 
-      // Build state-aware system prompt
+      // Build state-aware, mode-aware system prompt
       const systemPrompt = buildBentlySystemPrompt(
         relationalState,
         ctx.userId,
         partnerId,
         ctx.userId,
+        input.mode,
       );
 
       try {
@@ -116,14 +131,15 @@ export const bentlyRouter = router({
           maxTokens: 512,
         });
 
-        // Persist Bently response
+        // Persist Bently response with real mode (SOLO responses are only ever
+        // readable by the user who sent them — see `history` query below).
         const [saved] = await db
           .insert(bentlyResponses)
           .values({
             pairId: input.pairId,
             userId: ctx.userId,
             content: aiResponse.content,
-            mode: 'COMMON',
+            mode: input.mode,
             confidence: 80,
             suggestions: [],
             xpEarned: XP_CONFIG.BENTLY_INSIGHT,
@@ -138,7 +154,7 @@ export const bentlyRouter = router({
             pairId: input.pairId,
             source: 'BENTLY_INSIGHT',
             amount: XP_CONFIG.BENTLY_INSIGHT,
-            metadata: { responseId: saved.id, state: relationalState, provider: input.provider },
+            metadata: { responseId: saved.id, state: relationalState, mode: input.mode, provider: input.provider },
           });
 
         const user = await db.query.users.findFirst({ where: eq(users.id, ctx.userId) });
@@ -152,6 +168,7 @@ export const bentlyRouter = router({
         return {
           response: aiResponse.content,
           state: relationalState,
+          mode: input.mode,
           provider: input.provider,
           xpEarned: XP_CONFIG.BENTLY_INSIGHT,
         };
@@ -164,7 +181,44 @@ export const bentlyRouter = router({
       }
     }),
 
-  // Stateless coach (no pair required)
+  // Read history for a pair. SOLO messages are only ever returned to the
+  // user who created them. COUPLE messages are visible to both partners.
+  // This is the enforcement point for solo-conversation privacy.
+  history: protectedProcedure
+    .input(z.object({
+      pairId: z.string().uuid(),
+    }))
+    .query(async ({ input, ctx }) => {
+      if (!ctx.userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED' });
+      }
+
+      const db = ctx.db!;
+
+      const pair = await db.query.pairs.findFirst({
+        where: and(
+          eq(pairs.id, input.pairId),
+          or(eq(pairs.user1Id, ctx.userId), eq(pairs.user2Id, ctx.userId)),
+        ),
+      });
+
+      if (!pair) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Pair not found.' });
+      }
+
+      const rows = await db.query.bentlyResponses.findMany({
+        where: eq(bentlyResponses.pairId, input.pairId),
+        orderBy: (t: typeof bentlyResponses, { asc }: { asc: any }) => [asc(t.createdAt)],
+      });
+
+      // Filter in application code so a schema/query change can't silently
+      // reopen the privacy hole this endpoint exists to close.
+      return rows.filter((row: typeof bentlyResponses.$inferSelect) =>
+        row.mode !== 'SOLO' || row.userId === ctx.userId,
+      );
+    }),
+
+  // Stateless coach (no pair required, no persistence — for users without a partner yet)
   coachSolo: publicProcedure
     .input(z.object({
       message: z.string().min(1).max(2000),
