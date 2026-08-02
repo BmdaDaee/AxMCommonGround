@@ -22,7 +22,39 @@ export default function BentlyScreen() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+
+  // This screen is always SOLO mode — it's the private, one-to-one thread.
+  // If the user is in an active pair, we persist through bently.coach so the
+  // conversation survives across sessions, and it's read back through
+  // bently.history, which enforces server-side that SOLO messages only ever
+  // return to the user who wrote them. If there's no active pair yet, we fall
+  // back to the unpersisted coachSolo endpoint (nothing to scope privacy on).
+  const pairQuery = trpc.pairs.getMyPair.useQuery();
+  const pair = pairQuery.data;
+  const isPaired = !!pair && pair.status === 'ACTIVE';
+
+  const historyQuery = trpc.bently.history.useQuery(
+    { pairId: pair?.id ?? '' },
+    { enabled: isPaired },
+  );
+
+  const coachMutation = trpc.bently.coach.useMutation();
   const coachSoloMutation = trpc.bently.coachSolo.useMutation();
+
+  // Hydrate from persisted history once (paired users only)
+  useEffect(() => {
+    if (isPaired && historyQuery.data && messages.length === 0) {
+      const hydrated: Msg[] = historyQuery.data.flatMap((row: any) => {
+        // Each stored row is one Bently exchange: we only ever persisted the
+        // Bently response, so we render it as a single bently-role bubble.
+        // The user's own prompt text isn't stored server-side for SOLO rows
+        // beyond what's needed to generate the response, so history replays
+        // Bently's side; this session's live user turns render normally above.
+        return [{ role: 'bently' as const, content: row.content }];
+      });
+      setMessages(hydrated);
+    }
+  }, [isPaired, historyQuery.data]);
 
   const handleSend = async () => {
     const text = input.trim();
@@ -34,13 +66,27 @@ export default function BentlyScreen() {
     setSending(true);
 
     try {
-      const result = await coachSoloMutation.mutateAsync({
-        message: text,
-        provider: 'groq',
-      });
+      let responseText: string;
+
+      if (isPaired && pair) {
+        const result = await coachMutation.mutateAsync({
+          pairId: pair.id,
+          message: text,
+          mode: 'SOLO',
+          provider: 'groq',
+        });
+        responseText = result.response;
+      } else {
+        const result = await coachSoloMutation.mutateAsync({
+          message: text,
+          provider: 'groq',
+        });
+        responseText = result.response;
+      }
+
       setMessages((prev) => [
         ...prev,
-        { role: 'bently', content: result.response },
+        { role: 'bently', content: responseText },
       ]);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (err) {
@@ -61,6 +107,8 @@ export default function BentlyScreen() {
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages, sending]);
+
+  const loadingHistory = isPaired && historyQuery.isLoading;
 
   return (
     <KeyboardAvoidingView
@@ -93,7 +141,13 @@ export default function BentlyScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {messages.length === 0 && (
+        {loadingHistory && (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="small" color="#D4AF37" />
+          </View>
+        )}
+
+        {!loadingHistory && messages.length === 0 && (
           <View style={styles.emptyState}>
             <Text style={styles.emptyEyebrow}>SOLO CONVERSATION</Text>
             <Text style={styles.emptyTitle}>One-to-one.</Text>
