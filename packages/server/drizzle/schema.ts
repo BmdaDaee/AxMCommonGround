@@ -297,6 +297,33 @@ export const settings = pgTable('settings', {
   updatedAt,
 });
 
+export const horoscopes = pgTable('horoscopes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  scope: varchar('scope', { length: 16 }).notNull(), // 'SOLO' | 'COUPLE'
+  userId: uuid('user_id').references(() => users.id), // set when scope = SOLO
+  pairId: uuid('pair_id').references(() => pairs.id), // set when scope = COUPLE
+  zodiacSign: varchar('zodiac_sign', { length: 32 }), // solo only
+  partnerZodiacSign: varchar('partner_zodiac_sign', { length: 32 }), // couple only
+  content: text('content').notNull(),
+  weekOf: timestamp('week_of', { withTimezone: true }).notNull(),
+  provider: varchar('provider', { length: 32 }).notNull().default('groq'),
+  createdAt,
+});
+
+export const vaultMemories = pgTable('vault_memories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  pairId: uuid('pair_id').notNull().references(() => pairs.id),
+  createdBy: uuid('created_by').notNull().references(() => users.id),
+  type: varchar('type', { length: 32 }).notNull(), // 'SCENE' | 'MILESTONE' | 'RANK'
+  title: varchar('title', { length: 180 }).notNull(),
+  description: text('description').notNull().default(''),
+  imageUrl: text('image_url'),
+  promptUsed: text('prompt_used'),
+  imageProvider: varchar('image_provider', { length: 32 }),
+  status: varchar('status', { length: 32 }).notNull().default('COMPLETE'), // 'PENDING' | 'COMPLETE' | 'FAILED'
+  createdAt,
+});
+
 export const schemaTables = {
   users,
   userProfiles,
@@ -324,4 +351,6 @@ export const schemaTables = {
   milestones,
   notifications,
   settings,
+  horoscopes,
+  vaultMemories,
 };
