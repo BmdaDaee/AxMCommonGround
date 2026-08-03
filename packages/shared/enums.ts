@@ -150,13 +150,14 @@ export const GROWTH_CATEGORY = {
 } as const;
 export type GrowthCategory = typeof GROWTH_CATEGORY[keyof typeof GROWTH_CATEGORY];
 
-// DeeplyUs Categories
+// DeeplyUs Categories (6 prompt categories per COMPLETE_FEATURE_MANIFEST.md)
 export const DEEPLY_US_CATEGORY = {
   FANTASY: 'FANTASY',
   DESIRE: 'DESIRE',
-  BOUNDARY: 'BOUNDARY',
-  VULNERABILITY: 'VULNERABILITY',
-  APPRECIATION: 'APPRECIATION',
+  INSECURITY: 'INSECURITY',
+  EXPLORATION: 'EXPLORATION',
+  CONNECTION: 'CONNECTION',
+  AFTERCARE: 'AFTERCARE',
 } as const;
 export type DeeplyUsCategory = typeof DEEPLY_US_CATEGORY[keyof typeof DEEPLY_US_CATEGORY];
 

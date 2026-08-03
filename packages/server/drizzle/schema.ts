@@ -66,6 +66,9 @@ export const pairs = pgTable('pairs', {
   status: varchar('status', { length: 64 }).notNull().default('PENDING'),
   relationalState: varchar('relational_state', { length: 64 }).notNull().default('DORMANT'),
   relationalMetrics: jsonb('relational_metrics').notNull().default({}),
+  deeplyUsUnlockedByUser1: boolean('deeply_us_unlocked_by_user1').notNull().default(false),
+  deeplyUsUnlockedByUser2: boolean('deeply_us_unlocked_by_user2').notNull().default(false),
+  deeplyUsUnlockedAt: timestamp('deeply_us_unlocked_at', { withTimezone: true }),
   pairedAt: timestamp('paired_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt,
 });
@@ -165,6 +168,7 @@ export const exercises = pgTable('exercises', {
   duration: integer('duration').notNull().default(10),
   xpReward: integer('xp_reward').notNull().default(0),
   difficulty: varchar('difficulty', { length: 64 }).notNull().default('EASY'),
+  isDeeplyUs: boolean('is_deeply_us').notNull().default(false),
   createdAt,
   updatedAt,
 });
@@ -328,7 +332,7 @@ export const vaultMemories = pgTable('vault_memories', {
 // ─── Sparks Module ───────────────────────────────────────────────────────────
 
 export const sparkStatusEnum = pgEnum('spark_status', ['UNANSWERED', 'WAITING_ON_PARTNER', 'REVEALED']);
-export const sparkTypeEnum = pgEnum('spark_type', ['WOULD_YOU_RATHER', 'FINISH_SENTENCE', 'RATE_DAY', 'TWO_TRUTHS']);
+export const sparkTypeEnum = pgEnum('spark_type', ['WOULD_YOU_RATHER', 'FINISH_SENTENCE', 'RATE_DAY', 'TWO_TRUTHS', 'INTIMATE_PROMPT']);
 
 export const sparks = pgTable('sparks', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -344,6 +348,18 @@ export const sparks = pgTable('sparks', {
   isDeeplyUs: boolean('is_deeply_us').default(false).notNull(),
   createdAt,
   updatedAt,
+});
+
+// ─── DeeplyUs Chat Messages ──────────────────────────────────────────────────
+
+export const deeplyUsMessages = pgTable('deeply_us_messages', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pairId: uuid('pair_id').notNull().references(() => pairs.id, { onDelete: 'cascade' }),
+  userId: uuid('user_id').notNull().references(() => users.id),
+  role: varchar('role', { length: 16 }).notNull(), // 'user' | 'assistant'
+  content: text('content').notNull(),
+  xpEarned: integer('xp_earned').notNull().default(0),
+  createdAt,
 });
 
 export const schemaTables = {
@@ -376,4 +392,5 @@ export const schemaTables = {
   horoscopes,
   vaultMemories,
   sparks,
+  deeplyUsMessages,
 };

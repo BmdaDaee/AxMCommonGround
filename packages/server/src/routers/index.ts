@@ -7,6 +7,7 @@ import { xpRouter } from './xp.js';
 import { astrologyRouter } from './astrology.js';
 import { vaultRouter } from './vault.js';
 import { sparksRouter } from './sparks.js';
+import { deeplyUsRouter } from './deeplyUs.js';
 
 export const appRouter = router({
   auth: authRouter,
@@ -17,6 +18,7 @@ export const appRouter = router({
   astrology: astrologyRouter,
   vault: vaultRouter,
   sparks: sparksRouter,
+  deeplyUs: deeplyUsRouter,
 });
 
 export type AppRouter = typeof appRouter;
