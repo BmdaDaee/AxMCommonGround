@@ -1,51 +1,83 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, TextInput, TouchableOpacity, Text, StyleSheet, ScrollView, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  TextInput,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
 import { trpc } from '../../src/lib/trpc';
+
+const BENTLY_SYSTEM_ID = 'BENTLY_SYSTEM';
 
 export default function MessagesScreen() {
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Array<{ role: string; content: string; sender?: string }>>([]);
-  const [loading, setLoading] = useState(false);
+  const [sending, setSending] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
-  const sendMessageMutation = trpc.messages.sendMessage.useMutation();
-  const getMessagesQuery = trpc.messages.getMessages.useQuery({ pairId: 'current' });
 
-  useEffect(() => {
-    if (getMessagesQuery.data) {
-      setMessages(getMessagesQuery.data.map(msg => ({
-        role: msg.senderId === 'currentUser' ? 'user' : 'partner',
-        content: msg.content,
-        sender: msg.senderName,
-      })));
-    }
-  }, [getMessagesQuery.data]);
+  // Fetch the authenticated user's pair
+  const pairQuery = trpc.pairs.getMyPair.useQuery();
+  const pairId = pairQuery.data?.id;
+  const currentUserId = pairQuery.data?.user1Id; // Will compare against senderId
+
+  // Fetch messages using the live pairId
+  const getMessagesQuery = trpc.messages.getMessages.useQuery(
+    { pairId: pairId! },
+    { enabled: !!pairId, refetchInterval: 3000 }
+  );
+
+  const sendMessageMutation = trpc.messages.sendMessage.useMutation();
+
+  const messages = getMessagesQuery.data ?? [];
 
   const handleSendMessage = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() || !pairId) return;
 
     const userMessage = message;
     setMessage('');
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setLoading(true);
+    setSending(true);
 
     try {
       await sendMessageMutation.mutateAsync({
-        pairId: 'current',
+        pairId,
         content: userMessage,
       });
-
-      // Refetch messages
+      // Refetch to get new messages + potential Bently intervention
       getMessagesQuery.refetch();
     } catch (error) {
       console.error('Error:', error);
     } finally {
-      setLoading(false);
+      setSending(false);
     }
   };
 
   useEffect(() => {
     scrollRef.current?.scrollToEnd({ animated: true });
-  }, [messages]);
+  }, [messages.length]);
+
+  // --- Loading State ---
+  if (pairQuery.isLoading) {
+    return (
+      <View style={styles.centerContainer}>
+        <ActivityIndicator size="large" color="#D4AF37" />
+        <Text style={styles.loadingText}>Connecting…</Text>
+      </View>
+    );
+  }
+
+  // --- No Pair State ---
+  if (!pairId) {
+    return (
+      <View style={styles.centerContainer}>
+        <Text style={styles.emptyTitle}>No pair found</Text>
+        <Text style={styles.emptyBody}>Link up with your partner to start messaging.</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -57,20 +89,31 @@ export default function MessagesScreen() {
       </View>
 
       <ScrollView ref={scrollRef} style={styles.messagesContainer}>
-        {messages.map((msg, idx) => (
-          <View
-            key={idx}
-            style={[
-              styles.messageBubble,
-              msg.role === 'user' ? styles.userMessage : styles.partnerMessage,
-            ]}
-          >
-            {msg.role === 'partner' && msg.sender && (
-              <Text style={styles.senderName}>{msg.sender}</Text>
-            )}
-            <Text style={styles.messageText}>{msg.content}</Text>
-          </View>
-        ))}
+        {messages.map((msg, idx) => {
+          const isBently = msg.userId === BENTLY_SYSTEM_ID;
+          const isCurrentUser = msg.userId === currentUserId;
+
+          if (isBently) {
+            return (
+              <View key={msg.id ?? idx} style={styles.bentlyBubble}>
+                <Text style={styles.bentlyLabel}>Bently</Text>
+                <Text style={styles.bentlyText}>{msg.content}</Text>
+              </View>
+            );
+          }
+
+          return (
+            <View
+              key={msg.id ?? idx}
+              style={[
+                styles.messageBubble,
+                isCurrentUser ? styles.userMessage : styles.partnerMessage,
+              ]}
+            >
+              <Text style={styles.messageText}>{msg.content}</Text>
+            </View>
+          );
+        })}
       </ScrollView>
 
       <View style={styles.inputContainer}>
@@ -80,13 +123,13 @@ export default function MessagesScreen() {
           placeholderTextColor="#666"
           value={message}
           onChangeText={setMessage}
-          editable={!loading}
+          editable={!sending}
           multiline
         />
         <TouchableOpacity
-          style={[styles.sendButton, loading && styles.sendButtonDisabled]}
+          style={[styles.sendButton, sending && styles.sendButtonDisabled]}
           onPress={handleSendMessage}
-          disabled={loading}
+          disabled={sending}
         >
           <Text style={styles.sendButtonText}>Send</Text>
         </TouchableOpacity>
@@ -100,6 +143,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#080808',
   },
+  centerContainer: {
+    flex: 1,
+    backgroundColor: '#080808',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: { color: '#D4AF37', marginTop: 12, fontSize: 14 },
+  emptyTitle: { color: '#D4AF37', fontSize: 20, fontWeight: 'bold', textAlign: 'center' },
+  emptyBody: { color: '#888', fontSize: 14, marginTop: 8, textAlign: 'center' },
   header: {
     padding: 15,
     borderBottomWidth: 1,
@@ -117,25 +170,48 @@ const styles = StyleSheet.create({
   messageBubble: {
     marginVertical: 8,
     padding: 12,
-    borderRadius: 8,
+    borderRadius: 16,
     maxWidth: '85%',
   },
   userMessage: {
     alignSelf: 'flex-end',
     backgroundColor: '#D4AF37',
+    borderBottomRightRadius: 4,
   },
   partnerMessage: {
     alignSelf: 'flex-start',
     backgroundColor: '#222',
-  },
-  senderName: {
-    color: '#999',
-    fontSize: 12,
-    marginBottom: 4,
+    borderBottomLeftRadius: 4,
   },
   messageText: {
     color: '#fff',
     fontSize: 14,
+    lineHeight: 20,
+  },
+  // Bently system message
+  bentlyBubble: {
+    alignSelf: 'center',
+    backgroundColor: 'rgba(183,110,121,0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(183,110,121,0.3)',
+    borderRadius: 16,
+    padding: 14,
+    marginVertical: 12,
+    maxWidth: '90%',
+  },
+  bentlyLabel: {
+    color: '#B76E79',
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  bentlyText: {
+    color: '#F0E0E0',
+    fontSize: 14,
+    lineHeight: 20,
+    fontStyle: 'italic',
   },
   inputContainer: {
     flexDirection: 'row',
