@@ -1,5 +1,3 @@
-// Palette: Pastel Pulse (CommonGround) -- mirrors packages/mobile/src/lib/theme.ts.
-// TODO(cleanup): import getTheme() directly instead of inlined hex values.
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
@@ -145,7 +143,7 @@ export default function BentlyScreen() {
       >
         {loadingHistory && (
           <View style={styles.emptyState}>
-            <ActivityIndicator size="small" color="#C97B5A" />
+            <ActivityIndicator size="small" color="#D4AF37" />
           </View>
         )}
 
@@ -214,7 +212,7 @@ export default function BentlyScreen() {
         <TextInput
           style={styles.input}
           placeholder="Say what's on your mind…"
-          placeholderTextColor="#9C9186"
+          placeholderTextColor="#555"
           value={input}
           onChangeText={setInput}
           editable={!sending}
@@ -230,7 +228,7 @@ export default function BentlyScreen() {
           disabled={!input.trim() || sending}
         >
           {sending ? (
-            <ActivityIndicator size="small" color="#F7F3EE" />
+            <ActivityIndicator size="small" color="#080808" />
           ) : (
             <Text style={styles.sendButtonText}>Send</Text>
           )}
@@ -243,7 +241,7 @@ export default function BentlyScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F7F3EE',
+    backgroundColor: '#080808',
   },
   header: {
     flexDirection: 'row',
@@ -253,10 +251,10 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8E0D5',
+    borderBottomColor: '#1a1a1a',
   },
   backLink: {
-    color: '#6B6259',
+    color: '#888',
     fontSize: 14,
     letterSpacing: 0.3,
   },
@@ -264,14 +262,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerEyebrow: {
-    color: '#9C9186',
+    color: '#666',
     fontSize: 9,
     letterSpacing: 3,
     fontWeight: '600',
     marginBottom: 2,
   },
   headerTitle: {
-    color: '#C97B5A',
+    color: '#D4AF37',
     fontSize: 18,
     fontWeight: '300',
     letterSpacing: -0.3,
@@ -288,14 +286,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   emptyEyebrow: {
-    color: '#9C9186',
+    color: '#666',
     fontSize: 11,
     letterSpacing: 3,
     fontWeight: '600',
     marginBottom: 12,
   },
   emptyTitle: {
-    color: '#3A332C',
+    color: '#fff',
     fontSize: 28,
     fontWeight: '300',
     letterSpacing: -0.5,
@@ -304,11 +302,11 @@ const styles = StyleSheet.create({
   emptyDivider: {
     width: 40,
     height: 1,
-    backgroundColor: '#C97B5A',
+    backgroundColor: '#D4AF37',
     marginBottom: 20,
   },
   emptyBody: {
-    color: '#6B6259',
+    color: '#aaa',
     fontSize: 15,
     lineHeight: 24,
     fontWeight: '300',
@@ -323,7 +321,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   senderLabel: {
-    color: '#9C9186',
+    color: '#666',
     fontSize: 10,
     letterSpacing: 3,
     fontWeight: '600',
@@ -336,27 +334,27 @@ const styles = StyleSheet.create({
     maxWidth: '85%',
   },
   userBubble: {
-    backgroundColor: '#C97B5A',
+    backgroundColor: '#D4AF37',
     borderBottomRightRadius: 4,
   },
   bentlyBubble: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#161616',
     borderWidth: 1,
-    borderColor: '#E8E0D5',
+    borderColor: '#222',
     borderBottomLeftRadius: 4,
   },
   errorBubble: {
-    borderColor: '#C97C87',
-    backgroundColor: '#FBEEEF',
+    borderColor: '#5a1f1f',
+    backgroundColor: '#1a0e0e',
   },
   bubbleText: {
-    color: '#3A332C',
+    color: '#e8e8e8',
     fontSize: 15,
     lineHeight: 22,
     fontWeight: '300',
   },
   userBubbleText: {
-    color: '#F7F3EE',
+    color: '#080808',
     fontWeight: '400',
   },
   typingBubble: {
@@ -370,7 +368,7 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#C97B5A',
+    backgroundColor: '#D4AF37',
     opacity: 0.6,
   },
   inputBar: {
@@ -378,25 +376,25 @@ const styles = StyleSheet.create({
     padding: 16,
     paddingBottom: Platform.OS === 'ios' ? 32 : 16,
     borderTopWidth: 1,
-    borderTopColor: '#E8E0D5',
+    borderTopColor: '#1a1a1a',
     gap: 8,
-    backgroundColor: '#F7F3EE',
+    backgroundColor: '#080808',
   },
   input: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
-    color: '#3A332C',
+    backgroundColor: '#111',
+    color: '#fff',
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E8E0D5',
+    borderColor: '#222',
     fontSize: 15,
     maxHeight: 120,
     fontWeight: '300',
   },
   sendButton: {
-    backgroundColor: '#C97B5A',
+    backgroundColor: '#D4AF37',
     paddingHorizontal: 18,
     borderRadius: 8,
     justifyContent: 'center',
@@ -407,7 +405,7 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   sendButtonText: {
-    color: '#F7F3EE',
+    color: '#080808',
     fontWeight: '600',
     fontSize: 14,
     letterSpacing: 0.3,
