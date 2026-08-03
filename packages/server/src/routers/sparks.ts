@@ -8,9 +8,9 @@ const db = dbClient!;
 
 /**
  * BentlyAI System Prompt — Street-Royal Voice
- * No clinical therapy-speak. No NVC. Straight-shooting and authentic.
+ * Authentic, observant, straight-shooting. No clinical therapy-speak. No corny openers.
  */
-const BENTLY_SYSTEM_PROMPT = `You are BentlyAI, the relationship engine embedded in AxM CommonGround. You have a 'street-royal' vibe—you are highly empathetic, incredibly observant, but straight-shooting and authentic. No clinical therapy-speak.`;
+const BENTLY_SYSTEM_PROMPT = `You are BentlyAI, the relationship engine embedded in AxM CommonGround. You have a 'street-royal' vibe—highly empathetic, incredibly observant, straight-shooting and authentic. No clinical therapy-speak. No corny catchphrases or forced openers. Just real talk.`;
 
 function buildBentlySynthesisPrompt(sparkContent: any, user1Answer: string, user2Answer: string): string {
   return `${BENTLY_SYSTEM_PROMPT}
@@ -19,7 +19,7 @@ Prompt: ${JSON.stringify(sparkContent)}
 Partner 1: ${user1Answer}
 Partner 2: ${user2Answer}
 
-Task: Write a single, insightful sentence synthesizing their answers. If they align, validate their shared vibe. If they differ, bridge the gap with a real, grounded perspective. You MUST start your sentence with either 'Listen lovely,' or 'Listen boo,'. Keep it under 25 words.`;
+Task: Write a single, insightful sentence synthesizing their answers. If they align, validate their shared vibe. If they differ, bridge the gap with a real, grounded perspective. Keep it under 25 words. Sound like a wise friend who sees everything, not a therapist.`;
 }
 
 export const sparksRouter = router({
@@ -48,9 +48,8 @@ export const sparksRouter = router({
       if (partnerAnswer !== null) {
         newStatus = 'REVEALED';
         // TODO: Replace with actual LLM call using buildBentlySynthesisPrompt()
-        // For now, placeholder that matches Bently's real voice:
-        const prompt = buildBentlySynthesisPrompt(spark.content, partnerAnswer, input.answer);
-        bentlySynthesis = "Listen boo, y'all are clearly on the same wavelength—own that energy together."; // Placeholder until LLM integration
+        const _prompt = buildBentlySynthesisPrompt(spark.content, partnerAnswer, input.answer);
+        bentlySynthesis = "Y'all are locked in on the same frequency right now."; // Placeholder until LLM integration
       }
 
       await db.update(sparks)
