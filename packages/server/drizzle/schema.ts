@@ -2,6 +2,7 @@ import {
   boolean,
   integer,
   jsonb,
+  pgEnum,
   pgTable,
   text,
   timestamp,
@@ -324,6 +325,27 @@ export const vaultMemories = pgTable('vault_memories', {
   createdAt,
 });
 
+// ─── Sparks Module ───────────────────────────────────────────────────────────
+
+export const sparkStatusEnum = pgEnum('spark_status', ['UNANSWERED', 'WAITING_ON_PARTNER', 'REVEALED']);
+export const sparkTypeEnum = pgEnum('spark_type', ['WOULD_YOU_RATHER', 'FINISH_SENTENCE', 'RATE_DAY', 'TWO_TRUTHS']);
+
+export const sparks = pgTable('sparks', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  pairId: uuid('pair_id').notNull().references(() => pairs.id, { onDelete: 'cascade' }),
+  type: sparkTypeEnum('type').notNull(),
+  content: jsonb('content').notNull(),
+  status: sparkStatusEnum('status').default('UNANSWERED').notNull(),
+  user1Id: uuid('user1_id').references(() => users.id),
+  user1Answer: text('user1_answer'),
+  user2Id: uuid('user2_id').references(() => users.id),
+  user2Answer: text('user2_answer'),
+  bentlySynthesis: text('bently_synthesis'),
+  isDeeplyUs: boolean('is_deeply_us').default(false).notNull(),
+  createdAt,
+  updatedAt,
+});
+
 export const schemaTables = {
   users,
   userProfiles,
@@ -353,4 +375,5 @@ export const schemaTables = {
   settings,
   horoscopes,
   vaultMemories,
+  sparks,
 };
