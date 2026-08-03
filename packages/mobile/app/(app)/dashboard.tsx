@@ -10,8 +10,6 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
-// Palette: Pastel Pulse (CommonGround) -- mirrors packages/mobile/src/lib/theme.ts.
-// TODO(cleanup): import getTheme() directly instead of inlined hex values.
 import * as Haptics from 'expo-haptics';
 import { trpc } from '../../src/lib/trpc';
 
@@ -19,27 +17,27 @@ const STATE_COPY: Record<string, { label: string; line: string; color: string }>
   ALIGNED: {
     label: 'Aligned',
     line: 'You and your partner are in step right now.',
-    color: '#7BA37E',
+    color: '#4ADE80',
   },
   DORMANT: {
     label: 'Dormant',
     line: 'The space is quiet. Nothing wrong — just quiet.',
-    color: '#C9A66B',
+    color: '#FBBF24',
   },
   MISALIGNED: {
     label: 'Misaligned',
     line: "You're reading from different pages. Not broken — just out of step.",
-    color: '#D19A5C',
+    color: '#FB923C',
   },
   CAPACITY_BLOCKED: {
     label: 'Capacity Blocked',
     line: 'One of you is running low. The space respects that.',
-    color: '#C97C87',
+    color: '#F87171',
   },
   TRUST_FRACTURED: {
     label: 'Trust Fractured',
     line: "Something needs care. Bently is here when you're ready.",
-    color: '#9B8AC4',
+    color: '#A78BFA',
   },
 };
 
@@ -62,7 +60,7 @@ export default function DashboardScreen() {
   if (pairQuery.isLoading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#C97B5A" />
+        <ActivityIndicator size="large" color="#D4AF37" />
         <Text style={styles.loadingText}>Finding your space…</Text>
       </View>
     );
@@ -100,7 +98,7 @@ export default function DashboardScreen() {
         <RefreshControl
           refreshing={pairQuery.isFetching}
           onRefresh={() => pairQuery.refetch()}
-          tintColor="#C97B5A"
+          tintColor="#D4AF37"
         />
       }
     >
@@ -179,7 +177,7 @@ export default function DashboardScreen() {
           <View
             style={[
               styles.divider,
-              { backgroundColor: STATE_COPY[pair.relationalState]?.color ?? '#C97B5A' },
+              { backgroundColor: STATE_COPY[pair.relationalState]?.color ?? '#D4AF37' },
             ]}
           />
           <Text style={styles.bodyText}>
@@ -211,41 +209,41 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F7F3EE' },
+  container: { flex: 1, backgroundColor: '#080808' },
   scrollContent: { paddingHorizontal: 32, paddingTop: 64, paddingBottom: 48 },
   centerContainer: {
-    flex: 1, backgroundColor: '#F7F3EE',
+    flex: 1, backgroundColor: '#080808',
     justifyContent: 'center', alignItems: 'center',
     paddingHorizontal: 32, gap: 16,
   },
-  loadingText: { color: '#6B6259', fontSize: 14, fontStyle: 'italic', fontWeight: '300' },
-  errorTitle: { color: '#3A332C', fontSize: 20, fontWeight: '300', textAlign: 'center' },
-  errorBody: { color: '#6B6259', fontSize: 14, lineHeight: 22, textAlign: 'center', marginBottom: 16, fontWeight: '300' },
+  loadingText: { color: '#888', fontSize: 14, fontStyle: 'italic', fontWeight: '300' },
+  errorTitle: { color: '#fff', fontSize: 20, fontWeight: '300', textAlign: 'center' },
+  errorBody: { color: '#888', fontSize: 14, lineHeight: 22, textAlign: 'center', marginBottom: 16, fontWeight: '300' },
   header: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'flex-end', marginBottom: 48,
   },
-  brandSmall: { color: '#9C9186', fontSize: 10, letterSpacing: 3, fontWeight: '600', marginBottom: 4 },
-  brand: { color: '#C97B5A', fontSize: 22, fontWeight: '300', letterSpacing: -0.3 },
-  logoutLink: { color: '#9C9186', fontSize: 13, letterSpacing: 0.5 },
+  brandSmall: { color: '#666', fontSize: 10, letterSpacing: 3, fontWeight: '600', marginBottom: 4 },
+  brand: { color: '#D4AF37', fontSize: 22, fontWeight: '300', letterSpacing: -0.3 },
+  logoutLink: { color: '#666', fontSize: 13, letterSpacing: 0.5 },
   eyebrowSection: { marginBottom: 12 },
-  eyebrow: { color: '#9C9186', fontSize: 11, letterSpacing: 3, fontWeight: '600' },
-  headline: { color: '#3A332C', fontSize: 28, fontWeight: '300', letterSpacing: -0.5, marginBottom: 16 },
-  divider: { width: 40, height: 1, backgroundColor: '#C97B5A', marginBottom: 20 },
-  bodyText: { color: '#6B6259', fontSize: 15, lineHeight: 24, fontWeight: '300', marginBottom: 32 },
+  eyebrow: { color: '#666', fontSize: 11, letterSpacing: 3, fontWeight: '600' },
+  headline: { color: '#fff', fontSize: 28, fontWeight: '300', letterSpacing: -0.5, marginBottom: 16 },
+  divider: { width: 40, height: 1, backgroundColor: '#D4AF37', marginBottom: 20 },
+  bodyText: { color: '#aaa', fontSize: 15, lineHeight: 24, fontWeight: '300', marginBottom: 32 },
   primaryButton: {
-    backgroundColor: '#C97B5A', paddingVertical: 16,
+    backgroundColor: '#D4AF37', paddingVertical: 16,
     borderRadius: 4, alignItems: 'center', marginBottom: 12,
   },
-  primaryButtonText: { color: '#FBF8F4', fontSize: 16, fontWeight: '600', letterSpacing: 0.5 },
+  primaryButtonText: { color: '#080808', fontSize: 16, fontWeight: '600', letterSpacing: 0.5 },
   secondaryButton: { paddingVertical: 14, alignItems: 'center' },
-  secondaryButtonText: { color: '#6B6259', fontSize: 14, letterSpacing: 0.3 },
+  secondaryButtonText: { color: '#888', fontSize: 14, letterSpacing: 0.3 },
   actionGroup: { gap: 12 },
   actionCard: {
-    backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E8E0D5',
+    backgroundColor: '#111', borderWidth: 1, borderColor: '#222',
     borderRadius: 8, padding: 24,
   },
-  actionLabel: { color: '#9C9186', fontSize: 10, letterSpacing: 3, fontWeight: '600', marginBottom: 8 },
-  actionTitle: { color: '#3A332C', fontSize: 17, fontWeight: '400', marginBottom: 12 },
-  actionHint: { color: '#C97B5A', fontSize: 13, letterSpacing: 0.3 },
+  actionLabel: { color: '#666', fontSize: 10, letterSpacing: 3, fontWeight: '600', marginBottom: 8 },
+  actionTitle: { color: '#fff', fontSize: 17, fontWeight: '400', marginBottom: 12 },
+  actionHint: { color: '#D4AF37', fontSize: 13, letterSpacing: 0.3 },
 });
