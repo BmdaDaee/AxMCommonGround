@@ -13,33 +13,47 @@ import * as SecureStore from 'expo-secure-store';
 import * as Haptics from 'expo-haptics';
 import { trpc } from '../../src/lib/trpc';
 
-const STATE_COPY: Record<string, { label: string; line: string; color: string }> = {
+// ─── Vibe State Definitions (Muted Palette) ─────────────────────────────────
+
+const VIBE_STATES: Record<string, {
+  label: string;
+  line: string;
+  color: string;
+  bentlyNote: string;
+}> = {
   ALIGNED: {
     label: 'Aligned',
     line: 'You and your partner are in step right now.',
-    color: '#4ADE80',
+    color: '#A3B18A', // Muted Sage
+    bentlyNote: 'The rhythm is good. Protect it by staying present, not coasting.',
   },
   DORMANT: {
     label: 'Dormant',
     line: 'The space is quiet. Nothing wrong — just quiet.',
-    color: '#FBBF24',
+    color: '#B8C0EC', // Muted Lavender
+    bentlyNote: 'Silence isn\'t distance unless you let it become that. Reach in.',
   },
   MISALIGNED: {
     label: 'Misaligned',
     line: "You're reading from different pages. Not broken — just out of step.",
-    color: '#FB923C',
+    color: '#DDB8A6', // Muted Clay/Terracotta
+    bentlyNote: 'You\'re both trying. The gap is in translation, not intention.',
   },
   CAPACITY_BLOCKED: {
     label: 'Capacity Blocked',
     line: 'One of you is running low. The space respects that.',
-    color: '#F87171',
+    color: '#C2C5BB', // Muted Warm Gray
+    bentlyNote: 'Low battery doesn\'t mean low love. Give the space room to breathe.',
   },
   TRUST_FRACTURED: {
     label: 'Trust Fractured',
     line: "Something needs care. Bently is here when you're ready.",
-    color: '#A78BFA',
+    color: '#E07A5F', // Muted Rose/Crimson
+    bentlyNote: 'This is the hard part. But showing up here means you haven\'t quit.',
   },
 };
+
+// ─── Main Dashboard ──────────────────────────────────────────────────────────
 
 export default function DashboardScreen() {
   const router = useRouter();
@@ -86,7 +100,6 @@ export default function DashboardScreen() {
 
   const pair = pairQuery.data;
   const hasPair = !!pair;
-  // Schema uses uppercase: ACTIVE, PENDING, DISSOLVED
   const isPaired = hasPair && pair.status === 'ACTIVE';
   const isPending = hasPair && pair.status === 'PENDING';
 
@@ -102,6 +115,7 @@ export default function DashboardScreen() {
         />
       }
     >
+      {/* Header */}
       <View style={styles.header}>
         <View>
           <Text style={styles.brandSmall}>AxM</Text>
@@ -165,48 +179,78 @@ export default function DashboardScreen() {
         </>
       )}
 
-      {/* CASE 3: Active pair */}
+      {/* CASE 3: Active pair — Vibe Dashboard */}
       {isPaired && (
         <>
-          <View style={styles.eyebrowSection}>
-            <Text style={styles.eyebrow}>CURRENT STATE</Text>
+          {/* ─── Vibe Gauge Hero Card ─── */}
+          <View style={[
+            styles.vibeCard,
+            { borderLeftColor: VIBE_STATES[pair.relationalState]?.color ?? '#D4AF37' },
+          ]}>
+            <Text style={styles.vibeEyebrow}>RELATIONAL VIBE</Text>
+
+            <View style={styles.vibeHeaderRow}>
+              <View style={[
+                styles.vibeDot,
+                { backgroundColor: VIBE_STATES[pair.relationalState]?.color ?? '#D4AF37' },
+              ]} />
+              <Text style={[
+                styles.vibeTitle,
+                { color: VIBE_STATES[pair.relationalState]?.color ?? '#D4AF37' },
+              ]}>
+                {VIBE_STATES[pair.relationalState]?.label ?? 'Reading…'}
+              </Text>
+            </View>
+
+            <Text style={styles.vibeLine}>
+              {VIBE_STATES[pair.relationalState]?.line ?? 'Bently is reading the space.'}
+            </Text>
+
+            {/* Bently's italicized commentary */}
+            <View style={styles.bentlyCommentary}>
+              <Text style={styles.bentlyNote}>
+                {VIBE_STATES[pair.relationalState]?.bentlyNote ?? 'Observing…'}
+              </Text>
+            </View>
           </View>
-          <Text style={styles.headline}>
-            {STATE_COPY[pair.relationalState]?.label ?? 'Reading…'}
-          </Text>
-          <View
-            style={[
-              styles.divider,
-              { backgroundColor: STATE_COPY[pair.relationalState]?.color ?? '#D4AF37' },
-            ]}
-          />
-          <Text style={styles.bodyText}>
-            {STATE_COPY[pair.relationalState]?.line ??
-              'Bently is reading the space.'}
-          </Text>
-          <View style={styles.actionGroup}>
+
+          {/* ─── Quick Actions Row ─── */}
+          <View style={styles.quickActionsRow}>
             <TouchableOpacity
-              style={styles.actionCard}
-              onPress={() => navigateWithHaptic('/(app)/bently')}
+              style={styles.quickActionCard}
+              onPress={() => navigateWithHaptic('/(app)/sparks')}
             >
-              <Text style={styles.actionLabel}>BENTLY</Text>
-              <Text style={styles.actionTitle}>Sit with the third presence</Text>
-              <Text style={styles.actionHint}>Talk one-to-one →</Text>
+              <Text style={styles.quickActionIcon}>✦</Text>
+              <Text style={styles.quickActionTitle}>Daily Sparks</Text>
+              <Text style={styles.quickActionHint}>Answer together →</Text>
             </TouchableOpacity>
+
             <TouchableOpacity
-              style={styles.actionCard}
+              style={styles.quickActionCard}
               onPress={() => navigateWithHaptic('/(app)/messages')}
             >
-              <Text style={styles.actionLabel}>SHARED</Text>
-              <Text style={styles.actionTitle}>Messages with your partner</Text>
-              <Text style={styles.actionHint}>Open thread →</Text>
+              <Text style={styles.quickActionIcon}>◈</Text>
+              <Text style={styles.quickActionTitle}>Chat</Text>
+              <Text style={styles.quickActionHint}>Open thread →</Text>
             </TouchableOpacity>
           </View>
+
+          {/* ─── Bently Deep Dive ─── */}
+          <TouchableOpacity
+            style={styles.bentlyCard}
+            onPress={() => navigateWithHaptic('/(app)/bently')}
+          >
+            <Text style={styles.bentlyCardLabel}>BENTLY</Text>
+            <Text style={styles.bentlyCardTitle}>Sit with the third presence</Text>
+            <Text style={styles.bentlyCardHint}>Talk one-to-one →</Text>
+          </TouchableOpacity>
         </>
       )}
     </ScrollView>
   );
 }
+
+// ─── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#080808' },
@@ -219,6 +263,8 @@ const styles = StyleSheet.create({
   loadingText: { color: '#888', fontSize: 14, fontStyle: 'italic', fontWeight: '300' },
   errorTitle: { color: '#fff', fontSize: 20, fontWeight: '300', textAlign: 'center' },
   errorBody: { color: '#888', fontSize: 14, lineHeight: 22, textAlign: 'center', marginBottom: 16, fontWeight: '300' },
+
+  // Header
   header: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'flex-end', marginBottom: 48,
@@ -226,6 +272,8 @@ const styles = StyleSheet.create({
   brandSmall: { color: '#666', fontSize: 10, letterSpacing: 3, fontWeight: '600', marginBottom: 4 },
   brand: { color: '#D4AF37', fontSize: 22, fontWeight: '300', letterSpacing: -0.3 },
   logoutLink: { color: '#666', fontSize: 13, letterSpacing: 0.5 },
+
+  // Shared
   eyebrowSection: { marginBottom: 12 },
   eyebrow: { color: '#666', fontSize: 11, letterSpacing: 3, fontWeight: '600' },
   headline: { color: '#fff', fontSize: 28, fontWeight: '300', letterSpacing: -0.5, marginBottom: 16 },
@@ -238,12 +286,114 @@ const styles = StyleSheet.create({
   primaryButtonText: { color: '#080808', fontSize: 16, fontWeight: '600', letterSpacing: 0.5 },
   secondaryButton: { paddingVertical: 14, alignItems: 'center' },
   secondaryButtonText: { color: '#888', fontSize: 14, letterSpacing: 0.3 },
-  actionGroup: { gap: 12 },
-  actionCard: {
-    backgroundColor: '#111', borderWidth: 1, borderColor: '#222',
-    borderRadius: 8, padding: 24,
+
+  // ─── Vibe Gauge Hero Card ───
+  vibeCard: {
+    backgroundColor: '#0F0F0F',
+    borderRadius: 20,
+    borderLeftWidth: 4,
+    padding: 28,
+    marginBottom: 24,
   },
-  actionLabel: { color: '#666', fontSize: 10, letterSpacing: 3, fontWeight: '600', marginBottom: 8 },
-  actionTitle: { color: '#fff', fontSize: 17, fontWeight: '400', marginBottom: 12 },
-  actionHint: { color: '#D4AF37', fontSize: 13, letterSpacing: 0.3 },
+  vibeEyebrow: {
+    color: '#555',
+    fontSize: 10,
+    letterSpacing: 3,
+    fontWeight: '700',
+    marginBottom: 16,
+  },
+  vibeHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  vibeDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 10,
+  },
+  vibeTitle: {
+    fontFamily: 'Fraunces',
+    fontSize: 26,
+    fontWeight: '400',
+  },
+  vibeLine: {
+    color: '#aaa',
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: '300',
+    marginBottom: 20,
+  },
+  bentlyCommentary: {
+    borderTopWidth: 1,
+    borderTopColor: '#1A1A1A',
+    paddingTop: 16,
+  },
+  bentlyNote: {
+    fontFamily: 'Fraunces',
+    fontStyle: 'italic',
+    fontSize: 14,
+    color: '#888',
+    lineHeight: 22,
+  },
+
+  // ─── Quick Actions Row ───
+  quickActionsRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  quickActionCard: {
+    flex: 1,
+    backgroundColor: '#0F0F0F',
+    borderWidth: 1,
+    borderColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+  },
+  quickActionIcon: {
+    color: '#D4AF37',
+    fontSize: 24,
+    marginBottom: 10,
+  },
+  quickActionTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 6,
+  },
+  quickActionHint: {
+    color: '#D4AF37',
+    fontSize: 12,
+    letterSpacing: 0.3,
+  },
+
+  // ─── Bently Deep Dive Card ───
+  bentlyCard: {
+    backgroundColor: '#0F0F0F',
+    borderWidth: 1,
+    borderColor: '#1A1A1A',
+    borderRadius: 16,
+    padding: 24,
+  },
+  bentlyCardLabel: {
+    color: '#666',
+    fontSize: 10,
+    letterSpacing: 3,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  bentlyCardTitle: {
+    color: '#fff',
+    fontSize: 17,
+    fontWeight: '400',
+    marginBottom: 12,
+  },
+  bentlyCardHint: {
+    color: '#D4AF37',
+    fontSize: 13,
+    letterSpacing: 0.3,
+  },
 });
