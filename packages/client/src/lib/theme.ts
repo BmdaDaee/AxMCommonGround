@@ -1,82 +1,93 @@
 /**
- * OBSIDIAN SOVEREIGN – CommonGround Design System
- * 
- * A dark, editorial aesthetic anchored in duality:
- * Gold (Midas) = wealth, truth, sovereignty
- * Purple (Amethyst) = introspection, power, mystique
- * Red (Crisis) = attention, rupture, breakthrough
- * 
- * Philosophy: Stripped of ornament. Hierarchy through restraint.
- * Typography as structure. Color as signal.
+ * PASTEL PULSE – CommonGround Design System
+ *
+ * Replaces the earlier "Obsidian Sovereign" black/gold/purple identity
+ * as of Aug 2026 -- deliberate pivot, not a bug. See canon decision log.
+ *
+ * A warm, organic aesthetic anchored in softness rather than severity:
+ * Terracotta = grounded warmth, honesty
+ * Sage = growth, steadiness
+ * Lavender = introspection, calm
+ *
+ * Deliberately avoids sterile blues and aggressive reds -- even the
+ * tension/crisis signal stays muted (clay rose) rather than alarm-red.
+ *
+ * Philosophy: fluid over rigid. Card-based and journey-driven layouts,
+ * not standard grids. Color as warmth, not just signal.
  */
 
 export const THEME = {
   colors: {
     // Core palette
     background: {
-      base: '#080808',      // Deep black – canvas
-      elevated: '#0F0F0F',  // Slightly lighter for layers
-      surface: '#1A1A1A',   // Cards, containers
-      hover: '#262626',     // Interactive states
+      base: '#F7F3EE',      // warm ivory – canvas
+      elevated: '#FBF8F4',  // slightly lighter for layers
+      surface: '#FFFFFF',   // cards, containers
+      hover: '#EDE6DC',     // interactive states
     },
-    
+
     primary: {
-      DEFAULT: '#D4AF37',   // Midas Gold – sovereignty, truth
-      light: '#E8C547',     // Lighter for highlights
-      dark: '#B8860B',      // Darker for emphasis
+      DEFAULT: '#C97B5A',   // Terracotta – warmth, groundedness
+      light: '#E0A184',
+      dark: '#A85D3F',
     },
-    
+
     accent: {
-      DEFAULT: '#9D4EDD',   // Amethyst Purple – introspection
-      light: '#C77DFF',     // Lighter
-      dark: '#7209B7',      // Darker
+      DEFAULT: '#8BA888',   // Sage Green – growth, steadiness
+      light: '#AFC7AC',
+      dark: '#6B8768',
     },
-    
+
     highlight: {
-      DEFAULT: '#E63946',   // Crisis Red – rupture, breakthrough
-      light: '#FF6B7A',     // Lighter
-      dark: '#D62828',      // Darker
+      DEFAULT: '#9B8AC4',   // Muted Lavender – introspection, calm
+      light: '#B9ADD6',
+      dark: '#7A6BA3',
     },
-    
+
     text: {
-      primary: '#F5F5F5',   // Off-white – primary copy
-      secondary: '#B0B0B0', // Gray – secondary info
-      tertiary: '#808080',  // Darker gray – muted
-      inverse: '#080808',   // For high-contrast backgrounds
+      primary: '#3A332C',   // Warm charcoal – primary copy (not pure black)
+      secondary: '#6B6259', // Warm gray – secondary info
+      tertiary: '#9C9186',  // Muted – tertiary
+      inverse: '#FBF8F4',   // For text on filled primary/accent surfaces
     },
-    
+
     border: {
-      DEFAULT: '#1E1E1E',   // Subtle borders
-      strong: '#2A2A2A',    // Stronger dividers
-      accent: '#9D4EDD',    // Purple accents
-      gold: '#D4AF37',      // Gold accents
+      DEFAULT: '#E8E0D5',   // Subtle borders
+      strong: '#D8CDBE',    // Stronger dividers
+      accent: '#8BA888',    // Sage accents
+      primary: '#C97B5A',   // Terracotta accents
     },
-    
+
     status: {
-      aligned: '#10B981',   // Green – healthy state
-      stress: '#F59E0B',    // Amber – warning
-      tension: '#E63946',   // Red – critical
-      stale: '#6B7280',     // Gray – dormant
+      aligned: '#7BA37E',       // Sage – healthy state
+      stress: '#D19A5C',        // Amber-terracotta – warning
+      tension: '#C97C87',       // Clay rose – critical, muted (not alarm-red)
+      stale: '#B0A8B9',         // Muted lavender-gray – dormant
     },
   },
-  
+
   typography: {
     fontFamily: {
+      // Blueprint calls for a "street-royal logotype" for headers and a
+      // readable serif for long-form mediation text. Not chosen/wired
+      // yet -- flagged as a separate open decision, not silently bundled
+      // into this color pivot.
       sans: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      serif: "Georgia, 'Times New Roman', serif", // placeholder for long-form therapy/mediation text
       mono: "'Courier Prime', 'Courier New', monospace",
     },
-    
+
     size: {
-      xs: '0.75rem',      // 12px
-      sm: '0.875rem',     // 14px
-      base: '1rem',       // 16px
-      lg: '1.125rem',     // 18px
-      xl: '1.25rem',      // 20px
-      '2xl': '1.5rem',    // 24px
-      '3xl': '1.875rem',  // 30px
-      '4xl': '2.25rem',   // 36px
+      xs: '0.75rem',
+      sm: '0.875rem',
+      base: '1rem',
+      lg: '1.125rem',
+      xl: '1.25rem',
+      '2xl': '1.5rem',
+      '3xl': '1.875rem',
+      '4xl': '2.25rem',
     },
-    
+
     weight: {
       thin: 100,
       extralight: 200,
@@ -87,7 +98,7 @@ export const THEME = {
       bold: 700,
       extrabold: 800,
     },
-    
+
     lineHeight: {
       tight: 1.2,
       normal: 1.5,
@@ -95,7 +106,7 @@ export const THEME = {
       loose: 2,
     },
   },
-  
+
   spacing: {
     xs: '0.25rem',
     sm: '0.5rem',
@@ -105,7 +116,7 @@ export const THEME = {
     '2xl': '3rem',
     '3xl': '4rem',
   },
-  
+
   radius: {
     none: '0',
     xs: '0.125rem',
@@ -115,17 +126,17 @@ export const THEME = {
     xl: '0.75rem',
     full: '9999px',
   },
-  
+
   shadows: {
-    xs: '0 1px 2px 0 rgba(0, 0, 0, 0.5)',
-    sm: '0 1px 3px 0 rgba(0, 0, 0, 0.6)',
-    md: '0 4px 6px -1px rgba(0, 0, 0, 0.7)',
-    lg: '0 10px 15px -3px rgba(0, 0, 0, 0.8)',
-    xl: '0 20px 25px -5px rgba(0, 0, 0, 0.9)',
-    gold: '0 0 20px rgba(212, 175, 55, 0.2)',
-    purple: '0 0 20px rgba(157, 78, 221, 0.2)',
+    xs: '0 1px 2px 0 rgba(58, 51, 44, 0.06)',
+    sm: '0 1px 3px 0 rgba(58, 51, 44, 0.08)',
+    md: '0 4px 6px -1px rgba(58, 51, 44, 0.1)',
+    lg: '0 10px 15px -3px rgba(58, 51, 44, 0.12)',
+    xl: '0 20px 25px -5px rgba(58, 51, 44, 0.14)',
+    terracotta: '0 0 20px rgba(201, 123, 90, 0.15)',
+    sage: '0 0 20px rgba(139, 168, 136, 0.15)',
   },
-  
+
   transitions: {
     fast: '150ms cubic-bezier(0.4, 0, 0.2, 1)',
     base: '200ms cubic-bezier(0.4, 0, 0.2, 1)',
